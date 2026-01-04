@@ -2,7 +2,7 @@
 
 **Aplikacja do archiwizacji i zarządzania umowami z funkcjami OCR i AI.**
 
-* Docker Compose? Sprawdż README-Docker.md
+* Docker Compose? Sprawdż @README-Docker.md
 
 ## Stack Technologiczny
 
