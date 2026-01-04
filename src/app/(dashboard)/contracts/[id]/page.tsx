@@ -25,6 +25,7 @@ interface Contract {
         contractDate?: string;
         startDate?: string;
         endDate?: string;
+        company?: string;
         client?: string;
         contractType?: string;
         status?: string;
@@ -69,6 +70,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
         statuses: any[];
         persons: any[];
         categories: any[];
+        companies: any[];
         customFields: any[];
     }>({
         clients: [],
@@ -76,6 +78,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
         statuses: [],
         persons: [],
         categories: [],
+        companies: [],
         customFields: []
     });
 
@@ -130,7 +133,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
 
     const fetchDictionaries = async () => {
         try {
-            const types = ['clients', 'types', 'statuses', 'persons', 'categories', 'fields'];
+            const types = ['clients', 'types', 'statuses', 'persons', 'categories', 'fields', 'companies'];
             const results = await Promise.all(
                 types.map(type => fetch(`/api/dictionaries?type=${type}`).then(res => res.json()))
             );
@@ -141,7 +144,8 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                 statuses: results[2],
                 persons: results[3],
                 categories: results[4],
-                customFields: results[5]
+                customFields: results[5],
+                companies: results[6]
             });
         } catch (error) {
             console.error('Error fetching dictionaries:', error);
@@ -470,6 +474,20 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                                     </div>
 
                                     <div className="space-y-2">
+                                        <Label>Nasza Firma</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.company || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, company: e.target.value })}
+                                        >
+                                            <option value="">Wybierz firmę</option>
+                                            {dictionaries.companies.map((c) => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
                                         <Label>Klient</Label>
                                         <select
                                             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
@@ -561,19 +579,27 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                                         />
                                     </div>
 
-                                    {dictionaries.customFields.map((field) => (
-                                        <div key={field._id} className="space-y-2">
-                                            <Label>{field.name}</Label>
-                                            <Input
-                                                value={editMetadata[field.name] || ''}
-                                                onChange={(e) => setEditMetadata({ ...editMetadata, [field.name]: e.target.value })}
-                                            />
-                                        </div>
-                                    ))}
+                                    {dictionaries.customFields
+                                        .filter(f => !f.metadata?.targetType || f.metadata?.targetType === 'clients')
+                                        .map((field) => (
+                                            <div key={field._id} className="space-y-2">
+                                                <Label>{field.name}</Label>
+                                                <Input
+                                                    value={editMetadata[field.name] || ''}
+                                                    onChange={(e) => setEditMetadata({ ...editMetadata, [field.name]: e.target.value })}
+                                                />
+                                            </div>
+                                        ))}
                                 </div>
                             ) : (
                                 <>
                                     <div className="grid gap-4 sm:grid-cols-2">
+                                        {contract.metadata.company && (
+                                            <div className="col-span-2 p-3 rounded-lg bg-zinc-50 border border-zinc-200 dark:bg-zinc-900/50 dark:border-zinc-800">
+                                                <Label className="text-muted-foreground mb-1 block">Nasza Firma</Label>
+                                                <p className="text-lg font-bold">{contract.metadata.company}</p>
+                                            </div>
+                                        )}
                                         {contract.metadata.client && (
                                             <div className="col-span-2 p-3 rounded-lg bg-blue-50/50 border border-blue-100">
                                                 <Label className="text-blue-800 font-semibold mb-1 block">Klient</Label>
@@ -644,7 +670,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                                         {/* Dynamiczne pola dodatkowe */}
                                         {Object.entries(contract.metadata).map(([key, value]) => {
                                             // Pomiń pola już obsłużone powyżej
-                                            const hardcodedFields = ['client', 'contractType', 'status', 'category', 'value', 'responsiblePerson', 'contractDate', 'startDate', 'endDate'];
+                                            const hardcodedFields = ['company', 'client', 'contractType', 'status', 'category', 'value', 'responsiblePerson', 'contractDate', 'startDate', 'endDate'];
                                             if (hardcodedFields.includes(key) || !value) return null;
 
                                             return (

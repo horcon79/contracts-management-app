@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany w tym projekcie beda dokumentowane w tym pliku.
 
+## [1.2.4] - 2026-01-04
+
+### Dodano
+
+- **Zaawansowane Filtrowanie**: Dodano rozwijany panel filtrów na liście umów, pozwalający na precyzyjne wyszukiwanie po firmie, kliencie, statusie, kategorii, osobie odpowiedzialnej, typie umowy oraz zakresie dat zakończenia.
+- **Obsługa Multi-Company**: Wprowadzono słownik "Firmy" (podmioty umów), umożliwiając zarządzanie kontraktami dla wielu własnych podmiotów.
+- **Dynamiczne Filtry**: Filtry na liście umów automatycznie uwzględniają pola zdefiniowane w słowniku "Pola dodatkowe".
+- **Poprawa UI Podsumowania AI**: Zmiana tła okna modalnego na jednolite dla lepszej czytelności tekstu.
+
 ## [1.2.3] - 2026-01-04
 
 ### Dodano

@@ -17,11 +17,25 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
-        const status = searchParams.get('status');
-        const client = searchParams.get('client');
         const expiring = searchParams.get('expiring');
 
-        const query: Record<string, unknown> = {};
+        const query: Record<string, any> = {};
+
+        // Dynamic filters from searchParams
+        searchParams.forEach((value, key) => {
+            if (['page', 'limit', 'search', 'expiring'].includes(key)) return;
+
+            if (value && value !== 'all') {
+                if (key.startsWith('metadata.')) {
+                    query[key] = value;
+                } else if (['status', 'client', 'company', 'category', 'responsiblePerson', 'contractType'].includes(key)) {
+                    query[`metadata.${key}`] = value;
+                } else if (key === 'startDate' || key === 'endDate' || key === 'contractDate') {
+                    // Simple exact date match or we could implement ranges
+                    query[`metadata.${key}`] = value;
+                }
+            }
+        });
 
         if (search) {
             // Find notes matching the search criteria
@@ -39,15 +53,11 @@ export async function GET(request: NextRequest) {
                 { description: { $regex: search, $options: 'i' } },
                 { aiSummary: { $regex: search, $options: 'i' } },
                 { 'metadata.client': { $regex: search, $options: 'i' } },
+                { 'metadata.company': { $regex: search, $options: 'i' } },
                 { _id: { $in: contractIdsFromNotes } }
             ];
         }
-        if (status) {
-            query['metadata.status'] = status;
-        }
-        if (client) {
-            query['metadata.client'] = client;
-        }
+
         if (expiring === '30') {
             query['metadata.endDate'] = {
                 $exists: true,

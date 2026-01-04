@@ -30,9 +30,11 @@ export default function UploadContractPage() {
     const [statuses, setStatuses] = useState<DictionaryItem[]>([]);
     const [persons, setPersons] = useState<DictionaryItem[]>([]);
     const [categories, setCategories] = useState<DictionaryItem[]>([]);
+    const [companies, setCompanies] = useState<DictionaryItem[]>([]);
     const [customFields, setCustomFields] = useState<DictionaryItem[]>([]);
 
     const [metadata, setMetadata] = useState<Record<string, string>>({
+        company: '',
         client: '',
         contractType: '',
         status: '',
@@ -58,7 +60,7 @@ export default function UploadContractPage() {
     }, []);
 
     const fetchDictionaries = async () => {
-        const types = ['clients', 'types', 'statuses', 'persons', 'categories', 'fields'];
+        const types = ['clients', 'types', 'statuses', 'persons', 'categories', 'fields', 'companies'];
         const results = await Promise.all(
             types.map((type) => fetch(`/api/dictionaries?type=${type}`).then((r) => r.json()))
         );
@@ -68,6 +70,7 @@ export default function UploadContractPage() {
         setPersons(results[3]);
         setCategories(results[4]);
         setCustomFields(results[5]);
+        setCompanies(results[6]);
     };
 
     const handleDrag = useCallback((e: React.DragEvent) => {
@@ -284,6 +287,23 @@ export default function UploadContractPage() {
                                     />
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label htmlFor="company">Nasza Firma (podmiot umowy)</Label>
+                                    <select
+                                        id="company"
+                                        value={metadata.company}
+                                        onChange={(e) => setMetadata({ ...metadata, company: e.target.value })}
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                    >
+                                        <option value="">Wybierz firmę</option>
+                                        {companies.map((c) => (
+                                            <option key={c._id} value={c.name}>
+                                                {c.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="client">Klient</Label>
@@ -431,18 +451,20 @@ export default function UploadContractPage() {
                                         />
                                     </div>
 
-                                    {/* Dynamiczne pola ze Słowników */}
-                                    {customFields.map((field) => (
-                                        <div key={field._id} className="space-y-2">
-                                            <Label htmlFor={`custom-${field._id}`}>{field.name}</Label>
-                                            <Input
-                                                id={`custom-${field._id}`}
-                                                value={metadata[field.name] || ''}
-                                                onChange={(e) => setMetadata({ ...metadata, [field.name]: e.target.value })}
-                                                placeholder={`Wprowadź ${field.name.toLowerCase()}`}
-                                            />
-                                        </div>
-                                    ))}
+                                    {/* Dynamiczne pola ze Słowników - tylko te przypisane do Klientów (ogólne metadane umowy) */}
+                                    {customFields
+                                        .filter(f => !f.metadata?.targetType || f.metadata?.targetType === 'clients')
+                                        .map((field) => (
+                                            <div key={field._id} className="space-y-2">
+                                                <Label htmlFor={`custom-${field._id}`}>{field.name}</Label>
+                                                <Input
+                                                    id={`custom-${field._id}`}
+                                                    value={metadata[field.name] || ''}
+                                                    onChange={(e) => setMetadata({ ...metadata, [field.name]: e.target.value })}
+                                                    placeholder={`Wprowadź ${field.name.toLowerCase()}`}
+                                                />
+                                            </div>
+                                        ))}
                                 </div>
                             </CardContent>
                         </Card>
