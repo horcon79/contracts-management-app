@@ -19,10 +19,30 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const { id } = await params;
         const body = await request.json();
-        const { apiKey, model, action } = body;
+        let { apiKey, model, action } = body;
+
+        // Fetch settings if not provided
+        if (!apiKey || !model) {
+            const Settings = (await import('@/models/Settings')).default;
+            const settings = await Settings.find({});
+            const settingsObj = settings.reduce((acc: any, curr) => {
+                acc[curr.key] = curr.value;
+                return acc;
+            }, {});
+
+            if (!apiKey && settingsObj.openai_api_key) {
+                apiKey = settingsObj.openai_api_key;
+            }
+            if (!model && settingsObj.default_model) {
+                model = settingsObj.default_model;
+            }
+        }
 
         if (!apiKey) {
-            return NextResponse.json({ error: 'Klucz API jest wymagany' }, { status: 400 });
+            return NextResponse.json({ error: 'Klucz API jest wymagany (podaj go ręcznie lub skonfiguruj w ustawieniach)' }, { status: 400 });
+        }
+        if (!model) {
+            model = 'gpt-4o';
         }
 
         // Sprawdź czy kontrakt istnieje

@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
         const query: Record<string, unknown> = {};
 
         if (search) {
-            query.$text = { $search: search };
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { originalFileName: { $regex: search, $options: 'i' } }
+            ];
         }
         if (status) {
             query['metadata.status'] = status;

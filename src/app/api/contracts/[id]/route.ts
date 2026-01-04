@@ -22,6 +22,11 @@ export async function GET(
             return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
         }
 
+        // Transform legacy paths
+        if (contract.pdfPath.startsWith('/uploads/')) {
+            contract.pdfPath = contract.pdfPath.replace('/uploads/', '/api/contracts/view/');
+        }
+
         return NextResponse.json(contract);
     } catch (error) {
         console.error('Error fetching contract:', error);

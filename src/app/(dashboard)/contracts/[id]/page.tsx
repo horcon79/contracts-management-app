@@ -57,6 +57,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
     const [description, setDescription] = useState('');
     const [generatingDescription, setGeneratingDescription] = useState(false);
     const [savingDescription, setSavingDescription] = useState(false);
+    const [clientDetails, setClientDetails] = useState<any>(null);
 
     useEffect(() => {
         fetchContract();
@@ -66,6 +67,9 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
     useEffect(() => {
         if (contract) {
             setDescription(contract.description || '');
+            if (contract.metadata.client) {
+                fetchClientDetails(contract.metadata.client);
+            }
         }
     }, [contract]);
 
@@ -92,6 +96,21 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
             }
         } catch (error) {
             console.error('Error fetching notes:', error);
+        }
+    };
+
+    const fetchClientDetails = async (clientName: string) => {
+        try {
+            const response = await fetch(`/api/dictionaries?type=clients`);
+            if (response.ok) {
+                const clients = await response.json();
+                const client = clients.find((c: any) => c.name === clientName);
+                if (client) {
+                    setClientDetails(client);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching client details:', error);
         }
     };
 
@@ -341,9 +360,25 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                         <CardContent className="space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 {contract.metadata.client && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Klient</Label>
-                                        <p className="font-medium">{contract.metadata.client}</p>
+                                    <div className="col-span-2 p-3 rounded-lg bg-blue-50/50 border border-blue-100">
+                                        <Label className="text-blue-800 font-semibold mb-1 block">Klient</Label>
+                                        <p className="text-lg font-bold text-blue-900">{contract.metadata.client}</p>
+                                        {clientDetails?.metadata && Object.keys(clientDetails.metadata).length > 0 && (
+                                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-blue-800/80">
+                                                {clientDetails.metadata.nip && (
+                                                    <div><span className="font-medium">NIP:</span> {clientDetails.metadata.nip}</div>
+                                                )}
+                                                {clientDetails.metadata.phone && (
+                                                    <div><span className="font-medium">Tel:</span> {clientDetails.metadata.phone}</div>
+                                                )}
+                                                {clientDetails.metadata.address && (
+                                                    <div className="sm:col-span-2"><span className="font-medium">Adres:</span> {clientDetails.metadata.address}</div>
+                                                )}
+                                                {clientDetails.metadata.contactPerson && (
+                                                    <div className="sm:col-span-2"><span className="font-medium">Kontakt:</span> {clientDetails.metadata.contactPerson}</div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {contract.metadata.contractType && (
@@ -394,6 +429,20 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                                         <p className="font-medium">{formatDate(contract.metadata.endDate)}</p>
                                     </div>
                                 )}
+
+                                {/* Dynamiczne pola dodatkowe */}
+                                {Object.entries(contract.metadata).map(([key, value]) => {
+                                    // Pomiń pola już obsłużone powyżej
+                                    const hardcodedFields = ['client', 'contractType', 'status', 'category', 'value', 'responsiblePerson', 'contractDate', 'startDate', 'endDate'];
+                                    if (hardcodedFields.includes(key) || !value) return null;
+
+                                    return (
+                                        <div key={key}>
+                                            <Label className="text-muted-foreground">{key}</Label>
+                                            <p className="font-medium">{value as string}</p>
+                                        </div>
+                                    );
+                                })}
                             </div>
                             <div className="pt-4 border-t">
                                 <div className="grid gap-4 sm:grid-cols-2 text-sm">

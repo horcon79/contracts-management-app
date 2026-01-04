@@ -8,8 +8,9 @@ import fs from 'fs/promises';
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id } = await params;
     try {
         const session = await auth();
 
@@ -22,7 +23,7 @@ export async function POST(
 
         await connectDB();
 
-        const contract = await Contract.findById(params.id);
+        const contract = await Contract.findById(id);
 
         if (!contract) {
             return NextResponse.json(
@@ -63,7 +64,7 @@ export async function POST(
 
         // Aktualizuj umowę w bazie danych
         const updatedContract = await Contract.findByIdAndUpdate(
-            params.id,
+            id,
             {
                 description: aiDescription.description,
                 metadata: {

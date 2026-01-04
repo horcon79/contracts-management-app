@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const session = await auth();
-        if (!session) {
+        if (!session || !session.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         await connectToDatabase();
 
         const body = await request.json();
-        const { type, name, color } = body;
+        const { type, name, color, metadata } = body;
 
         if (!type || !name) {
             return NextResponse.json({ error: 'Type and name are required' }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
             type,
             name,
             color: color || '#6B7280',
+            metadata: metadata || {},
         });
 
         return NextResponse.json(dictionary, { status: 201 });

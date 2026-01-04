@@ -7,7 +7,7 @@ services:
     container_name: contracts_mongodb
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin123
@@ -59,6 +59,7 @@ services:
       # Application
       - NODE_ENV=production
       - PORT=3000
+      - AUTH_TRUST_HOST=true
     volumes:
       # File uploads persistent storage
       - app_uploads:/app/uploads
@@ -125,6 +126,3 @@ volumes:
 networks:
   contracts_network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

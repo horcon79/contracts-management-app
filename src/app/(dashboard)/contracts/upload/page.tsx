@@ -26,8 +26,9 @@ export default function UploadContractPage() {
     const [statuses, setStatuses] = useState<DictionaryItem[]>([]);
     const [persons, setPersons] = useState<DictionaryItem[]>([]);
     const [categories, setCategories] = useState<DictionaryItem[]>([]);
+    const [customFields, setCustomFields] = useState<DictionaryItem[]>([]);
 
-    const [metadata, setMetadata] = useState({
+    const [metadata, setMetadata] = useState<Record<string, string>>({
         client: '',
         contractType: '',
         status: '',
@@ -44,7 +45,7 @@ export default function UploadContractPage() {
     }, []);
 
     const fetchDictionaries = async () => {
-        const types = ['clients', 'types', 'statuses', 'persons', 'categories'];
+        const types = ['clients', 'types', 'statuses', 'persons', 'categories', 'fields'];
         const results = await Promise.all(
             types.map((type) => fetch(`/api/dictionaries?type=${type}`).then((r) => r.json()))
         );
@@ -53,6 +54,7 @@ export default function UploadContractPage() {
         setStatuses(results[2]);
         setPersons(results[3]);
         setCategories(results[4]);
+        setCustomFields(results[5]);
     };
 
     const handleDrag = useCallback((e: React.DragEvent) => {
@@ -197,10 +199,11 @@ export default function UploadContractPage() {
                                         className="hidden"
                                         id="file-upload"
                                     />
-                                    <Label htmlFor="file-upload" className="cursor-pointer">
-                                        <Button type="button" variant="outline" asChild>
-                                            <span>Wybierz plik</span>
-                                        </Button>
+                                    <Label
+                                        htmlFor="file-upload"
+                                        className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 cursor-pointer"
+                                    >
+                                        Wybierz plik
                                     </Label>
                                 </>
                             )}
@@ -350,6 +353,19 @@ export default function UploadContractPage() {
                                     onChange={(e) => setMetadata({ ...metadata, endDate: e.target.value })}
                                 />
                             </div>
+
+                            {/* Dynamiczne pola ze Słowników */}
+                            {customFields.map((field) => (
+                                <div key={field._id} className="space-y-2">
+                                    <Label htmlFor={`custom-${field._id}`}>{field.name}</Label>
+                                    <Input
+                                        id={`custom-${field._id}`}
+                                        value={metadata[field.name] || ''}
+                                        onChange={(e) => setMetadata({ ...metadata, [field.name]: e.target.value })}
+                                        placeholder={`Wprowadź ${field.name.toLowerCase()}`}
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>

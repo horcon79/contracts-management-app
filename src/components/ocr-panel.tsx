@@ -55,29 +55,38 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Pobierz status OCR
-    const fetchOCRStatus = async () => {
+    // Pobierz status OCR i ustawienia
+    const fetchData = async () => {
         try {
-            const response = await fetch(`/api/contracts/${contractId}/ocr`);
-            if (response.ok) {
-                const data = await response.json();
+            const [statusRes, settingsRes] = await Promise.all([
+                fetch(`/api/contracts/${contractId}/ocr`),
+                fetch('/api/admin/settings')
+            ]);
+
+            if (statusRes.ok) {
+                const data = await statusRes.json();
                 setStatus(data.data);
             }
+
+            if (settingsRes.ok) {
+                const settingsData = await settingsRes.json();
+                if (settingsData.openai_api_key) {
+                    setApiKey(settingsData.openai_api_key);
+                }
+                if (settingsData.default_model) {
+                    setSelectedModel(settingsData.default_model);
+                }
+            }
         } catch (error) {
-            console.error('Error fetching OCR status:', error);
+            console.error('Error fetching data:', error);
         }
     };
 
     useEffect(() => {
-        fetchOCRStatus();
+        fetchData();
     }, [contractId]);
 
     const handleOCRAction = async (action: 'ocr' | 'summary') => {
-        if (!apiKey.trim()) {
-            setError('Klucz API jest wymagany');
-            return;
-        }
-
         setLoading(true);
         setError(null);
         setResult(null);
@@ -97,8 +106,7 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
 
             if (response.ok) {
                 setResult(data);
-                setApiKey(''); // Wyczyść API key po użyciu
-                await fetchOCRStatus(); // Odśwież status
+                fetchData(); // Odśwież status
                 onUpdate?.(); // Powiadom komponent nadrzędny o aktualizacji
             } else {
                 setError(data.error || 'Wystąpił błąd podczas przetwarzania');

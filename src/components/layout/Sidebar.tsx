@@ -12,6 +12,7 @@ import {
     Upload,
     Settings,
     Users,
+    Shield,
     BookOpen,
     LogOut,
 } from 'lucide-react';
