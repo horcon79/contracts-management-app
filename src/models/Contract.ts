@@ -77,7 +77,7 @@ const ContractSchema = new Schema<IContract>(
     }
 );
 
-ContractSchema.index({ title: 'text', ocrText: 'text', description: 'text' });
+ContractSchema.index({ title: 'text', ocrText: 'text', description: 'text', aiSummary: 'text' });
 ContractSchema.index({ 'metadata.client': 1 });
 ContractSchema.index({ 'metadata.contractType': 1 });
 ContractSchema.index({ 'metadata.status': 1 });

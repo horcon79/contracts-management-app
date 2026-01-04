@@ -37,6 +37,10 @@ export async function GET() {
                 { type: 'clients', name: 'Klient Testowy', color: '#3B82F6', isActive: true, order: 0 },
                 { type: 'categories', name: 'IT', color: '#6366F1', isActive: true, order: 0 },
                 { type: 'persons', name: 'Jan Kowalski', color: '#6366F1', isActive: true, order: 0 },
+                { type: 'fields', name: 'NIP', color: '#6B7280', isActive: true, order: 1, metadata: { targetType: 'clients', dataType: 'text' } },
+                { type: 'fields', name: 'Adres', color: '#6B7280', isActive: true, order: 2, metadata: { targetType: 'clients', dataType: 'text' } },
+                { type: 'fields', name: 'Telefon', color: '#6B7280', isActive: true, order: 3, metadata: { targetType: 'clients', dataType: 'text' } },
+                { type: 'fields', name: 'Osoba kontaktowa', color: '#6B7280', isActive: true, order: 4, metadata: { targetType: 'clients', dataType: 'text' } },
             ];
             await Dictionary.insertMany(defaultDictionaries);
         }

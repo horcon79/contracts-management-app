@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, FileText, X } from 'lucide-react';
+import { Upload, FileText, X, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DictionaryItem {
     _id: string;
     name: string;
     color: string;
+    metadata?: Record<string, any>;
 }
 
 export default function UploadContractPage() {
@@ -39,6 +41,12 @@ export default function UploadContractPage() {
         startDate: '',
         endDate: '',
     });
+
+    // Client modal state
+    const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+    const [newClientName, setNewClientName] = useState('');
+    const [newClientMetadata, setNewClientMetadata] = useState<Record<string, any>>({});
+    const [isCreatingClient, setIsCreatingClient] = useState(false);
 
     useEffect(() => {
         fetchDictionaries();
@@ -93,6 +101,40 @@ export default function UploadContractPage() {
         }
     };
 
+    const handleAddClient = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newClientName.trim()) return;
+
+        setIsCreatingClient(true);
+        try {
+            const response = await fetch('/api/dictionaries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'clients',
+                    name: newClientName,
+                    metadata: newClientMetadata
+                }),
+            });
+
+            if (response.ok) {
+                const newClient = await response.json();
+                await fetchDictionaries(); // Refresh list
+                setMetadata({ ...metadata, client: newClient.name });
+                setIsClientModalOpen(false);
+                setNewClientName('');
+                setNewClientMetadata({});
+                toast.success('Dodano nowego klienta');
+            } else {
+                toast.error('Nie udało się dodać klienta');
+            }
+        } catch (error) {
+            console.error('Error creating client:', error);
+            toast.error('Błąd podczas tworzenia klienta');
+        } finally {
+            setIsCreatingClient(false);
+        }
+    };
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!file || !title) return;
@@ -233,10 +275,17 @@ export default function UploadContractPage() {
                                 <select
                                     id="client"
                                     value={metadata.client}
-                                    onChange={(e) => setMetadata({ ...metadata, client: e.target.value })}
+                                    onChange={(e) => {
+                                        if (e.target.value === 'ADD_NEW') {
+                                            setIsClientModalOpen(true);
+                                        } else {
+                                            setMetadata({ ...metadata, client: e.target.value });
+                                        }
+                                    }}
                                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                                 >
                                     <option value="">Wybierz klienta</option>
+                                    <option value="ADD_NEW" className="font-bold text-primary">* Dodaj nowego kontrahenta *</option>
                                     {clients.map((c) => (
                                         <option key={c._id} value={c.name}>
                                             {c.name}
@@ -379,6 +428,69 @@ export default function UploadContractPage() {
                     </Button>
                 </div>
             </form>
+
+            {/* Modal dodawania klienta */}
+            {isClientModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                            <CardTitle>Dodaj nowego klienta</CardTitle>
+                            <Button variant="ghost" size="icon" onClick={() => setIsClientModalOpen(false)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleAddClient} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-client-name">Nazwa klienta *</Label>
+                                    <Input
+                                        id="new-client-name"
+                                        value={newClientName}
+                                        onChange={(e) => setNewClientName(e.target.value)}
+                                        placeholder="Nazwa firmy lub imię i nazwisko"
+                                        required
+                                    />
+                                </div>
+
+                                {customFields
+                                    .filter(f => f.metadata?.targetType === 'clients')
+                                    .map(field => (
+                                        <div key={field._id} className="space-y-2">
+                                            <Label htmlFor={`modal-${field._id}`}>{field.name}</Label>
+                                            <Input
+                                                id={`modal-${field._id}`}
+                                                type={field.metadata?.dataType === 'date' ? 'date' :
+                                                    field.metadata?.dataType === 'number' ? 'number' : 'text'}
+                                                value={newClientMetadata[field.name] || ''}
+                                                onChange={(e) => setNewClientMetadata({ ...newClientMetadata, [field.name]: e.target.value })}
+                                                placeholder={`Wprowadź ${field.name.toLowerCase()}`}
+                                            />
+                                        </div>
+                                    ))
+                                }
+
+                                <div className="flex gap-3 pt-4">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => setIsClientModalOpen(false)}
+                                    >
+                                        Anuluj
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        className="flex-1"
+                                        disabled={!newClientName.trim() || isCreatingClient}
+                                    >
+                                        {isCreatingClient ? 'Zapisywanie...' : 'Zapisz klienta'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

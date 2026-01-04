@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Plus, Search, Eye } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Download } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 interface Contract {
@@ -62,6 +62,13 @@ export default function ContractsPage() {
         fetchContracts();
     };
 
+    const handleExport = () => {
+        const params = new URLSearchParams({
+            ...(search && { search }),
+        });
+        window.location.href = `/api/contracts/export?${params.toString()}`;
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -75,6 +82,10 @@ export default function ContractsPage() {
                         Dodaj umowę
                     </Button>
                 </Link>
+                <Button variant="outline" onClick={handleExport} className="ml-2">
+                    <Download className="mr-2 h-4 w-4" />
+                    Eksportuj CSV
+                </Button>
             </div>
 
             <form onSubmit={handleSearch} className="flex gap-2">

@@ -103,6 +103,11 @@ export function Sidebar() {
                     <LogOut className="h-4 w-4" />
                     Wyloguj się
                 </Button>
+
+                <div className="mt-4 px-3">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Wersja</p>
+                    <p className="text-xs font-mono text-muted-foreground">v1.0.9</p>
+                </div>
             </div>
         </div>
     );

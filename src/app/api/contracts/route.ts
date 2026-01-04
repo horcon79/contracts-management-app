@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
-                { originalFileName: { $regex: search, $options: 'i' } }
+                { originalFileName: { $regex: search, $options: 'i' } },
+                { ocrText: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { aiSummary: { $regex: search, $options: 'i' } }
             ];
         }
         if (status) {

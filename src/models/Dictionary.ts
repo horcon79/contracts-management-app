@@ -36,7 +36,7 @@ const DictionarySchema = new Schema<IDictionary>(
         },
         metadata: {
             type: Map,
-            of: String,
+            of: Schema.Types.Mixed,
             default: {},
         },
     },
