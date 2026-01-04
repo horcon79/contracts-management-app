@@ -136,6 +136,21 @@ export async function POST(request: NextRequest) {
             createdBy: session.user.id,
         });
 
+        // Queue email notification if responsible person is defined (Delayed 5 min)
+        if (contract.metadata.responsiblePerson) {
+            try {
+                const { emailQueue } = await import('@/lib/queue');
+                await emailQueue.add(
+                    'new_contract_notification',
+                    { contractId: contract._id, type: 'new_contract' },
+                    { delay: 5 * 60 * 1000 } // 5 minutes
+                );
+                console.log(`Queued notification for contract ${contract._id}`);
+            } catch (queueError) {
+                console.error('Error queueing notification:', queueError);
+            }
+        }
+
         return NextResponse.json(contract, { status: 201 });
     } catch (error) {
         console.error('Error creating contract:', error);

@@ -11,10 +11,18 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState({
         openai_api_key: '',
         default_model: 'gpt-4o',
+        smtp_host: '',
+        smtp_port: '587',
+        smtp_user: '',
+        smtp_pass: '',
+        smtp_from: '',
+        smtp_secure: 'false',
     });
     const [showKey, setShowKey] = useState(false);
+    const [showSmtpPass, setShowSmtpPass] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [testingSmtp, setTestingSmtp] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
 
     useEffect(() => {
@@ -29,6 +37,12 @@ export default function SettingsPage() {
                 setSettings({
                     openai_api_key: data.openai_api_key || '',
                     default_model: data.default_model || 'gpt-4o',
+                    smtp_host: data.smtp_host || '',
+                    smtp_port: data.smtp_port || '587',
+                    smtp_user: data.smtp_user || '',
+                    smtp_pass: data.smtp_pass || '',
+                    smtp_from: data.smtp_from || '',
+                    smtp_secure: data.smtp_secure || 'false',
                 });
             }
         } catch (error) {
@@ -57,6 +71,30 @@ export default function SettingsPage() {
             console.error('Error saving settings:', error);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const testSmtp = async () => {
+        setTestingSmtp(true);
+        try {
+            const response = await fetch('/api/admin/settings/test-smtp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setMessage('Połączenie SMTP udane! Testowy e-mail został wysłany.');
+            } else {
+                setMessage(`Błąd SMTP: ${data.error}`);
+            }
+            setTimeout(() => setMessage(null), 5000);
+        } catch (error) {
+            console.error('Error testing SMTP:', error);
+            setMessage('Błąd podczas testowania połączenia.');
+        } finally {
+            setTestingSmtp(false);
         }
     };
 
@@ -117,6 +155,107 @@ export default function SettingsPage() {
                                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
                             </select>
                         </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Settings className="h-5 w-5" />
+                            Powiadomienia E-mail (SMTP)
+                        </CardTitle>
+                        <CardDescription>
+                            Skonfiguruj serwer poczty wychodzącej dla powiadomień o nowych i kończących się umowach
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="smtpHost">Host SMTP</Label>
+                                <Input
+                                    id="smtpHost"
+                                    value={settings.smtp_host}
+                                    onChange={(e) => setSettings({ ...settings, smtp_host: e.target.value })}
+                                    placeholder="smtp.example.com"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="smtpPort">Port</Label>
+                                <Input
+                                    id="smtpPort"
+                                    value={settings.smtp_port}
+                                    onChange={(e) => setSettings({ ...settings, smtp_port: e.target.value })}
+                                    placeholder="587"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="smtpUser">Użytkownik</Label>
+                            <Input
+                                id="smtpUser"
+                                value={settings.smtp_user}
+                                onChange={(e) => setSettings({ ...settings, smtp_user: e.target.value })}
+                                placeholder="user@example.com"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="smtpPass">Hasło</Label>
+                            <div className="relative">
+                                <Input
+                                    id="smtpPass"
+                                    type={showSmtpPass ? 'text' : 'password'}
+                                    value={settings.smtp_pass}
+                                    onChange={(e) => setSettings({ ...settings, smtp_pass: e.target.value })}
+                                    placeholder="••••••••"
+                                    className="pr-10"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-full px-3"
+                                    onClick={() => setShowSmtpPass(!showSmtpPass)}
+                                >
+                                    {showSmtpPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="smtpFrom">E-mail nadawcy</Label>
+                                <Input
+                                    id="smtpFrom"
+                                    value={settings.smtp_from}
+                                    onChange={(e) => setSettings({ ...settings, smtp_from: e.target.value })}
+                                    placeholder="no-reply@example.com"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="smtpSecure">Szyfrowanie (SSL/TLS)</Label>
+                                <select
+                                    id="smtpSecure"
+                                    value={settings.smtp_secure}
+                                    onChange={(e) => setSettings({ ...settings, smtp_secure: e.target.value })}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                    <option value="false">STARTTLS (Zwykle port 587)</option>
+                                    <option value="true">SSL/TLS (Zwykle port 465)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={testSmtp}
+                            disabled={testingSmtp || !settings.smtp_host}
+                            className="w-full"
+                        >
+                            {testingSmtp ? 'Testowanie...' : 'Testuj połączenie SMTP'}
+                        </Button>
                     </CardContent>
                 </Card>
 

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-type DictionaryType = 'clients' | 'types' | 'statuses' | 'persons' | 'categories' | 'fields';
+type DictionaryType = 'clients' | 'types' | 'statuses' | 'persons' | 'categories' | 'fields' | 'companies';
 
 interface DictionaryItem {
     _id: string;
@@ -25,6 +25,7 @@ const dictionaryTypes: { value: DictionaryType; label: string }[] = [
     { value: 'statuses', label: 'Statusy' },
     { value: 'persons', label: 'Osoby odpowiedzialne' },
     { value: 'categories', label: 'Kategorie' },
+    { value: 'companies', label: 'Nasze Firmy' },
     { value: 'fields', label: 'Dodatkowe pola' },
 ];
 

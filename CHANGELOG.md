@@ -2,6 +2,16 @@
 
 Wszystkie istotne zmiany w tym projekcie beda dokumentowane w tym pliku.
 
+## [1.4.0] - 2026-01-04
+
+### Added
+
+- Automated Email Notifications (5 min delay after contract upload).
+- Weekly Expiration Reports (contracts expiring < 30 days).
+- SMTP Configuration panel in Admin Settings with "Test Connection" feature.
+- Background Job processing with BullMQ and Redis.
+- Instrumentation hook for reliable background worker startup.
+
 ## [1.2.4] - 2026-01-04
 
 ### Dodano
