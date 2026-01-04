@@ -1,6 +1,8 @@
 # System Zarządzania Umowami
 
-Aplikacja do archiwizacji i zarządzania umowami z funkcjami OCR i AI.
+**Aplikacja do archiwizacji i zarządzania umowami z funkcjami OCR i AI.**
+
+* Docker Compose? Sprawdż README-Docker.md
 
 ## Stack Technologiczny
 
