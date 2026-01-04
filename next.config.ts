@@ -5,9 +5,6 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: 'standalone',
   reactCompiler: true,
-  experimental: {
-    instrumentationHook: true,
-  },
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },

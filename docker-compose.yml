@@ -9,9 +9,9 @@ services:
     ports:
       - "27018:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin123
-      MONGO_INITDB_DATABASE: contracts_app
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-admin123}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB_NAME:-contracts_app}
     volumes:
       # MongoDB data volume - 50GB
       - mongodb_data:/data/db
@@ -43,7 +43,7 @@ services:
       - "${APP_PORT:-3000}:3000"
     environment:
       # Database
-      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/contracts_app?authSource=admin
+      - MONGODB_URI=${MONGODB_URI}
       # OpenAI API
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-your-openai-api-key}
       # Auth
