@@ -89,14 +89,16 @@ Domyślne dane logowania:
 - [x] **AI - podsumowania umów** (OpenAI GPT-4o, GPT-4 Turbo)
 - [x] **Bezpieczne zarządzanie kluczami API** (maskowanie, walidacja)
 - [x] **Wybór modelu AI** (GPT-4o, GPT-4o Mini, GPT-4 Turbo)
+- [X] Przeglądarka PDF w aplikacji
+- [X] Panel administracyjny użytkowników i ustawienia (dodawanie klucza API OpenaAI)
 
 ### Do implementacji w kolejnych fazach 🚧
 
 - [ ] Vector Search - wyszukiwanie semantyczne
+- [ ] Powiadomienia mailowe - konfiguracja servera SMTP - powiadomienia o nowej umowie dodanej do bazy do osoby odpowiedzialnej, powiadomienia o zbliżającym się terminie ważności 14 dni przed. 
 - [ ] Chat z umową (RAG z LangChain)
 - [ ] Integracja z Windows Domain (LDAP)
-- [ ] Przeglądarka PDF w aplikacji
-- [ ] Panel administracyjny użytkowników
+
 
 ## Struktura projektu
 
