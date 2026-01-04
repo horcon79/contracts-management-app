@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
+import Settings from '@/models/Settings';
+import { connectToDatabase } from '@/lib/mongodb';
+import pdfParse from 'pdf-parse';
 
 export interface OCRResult {
     success: boolean;
@@ -26,61 +29,118 @@ export class OCRService {
     }
 
     /**
-     * Ekstraktuje tekst z pliku PDF używając OpenAI Vision API
+     * Pobiera ustawienia systemowe z bazy danych
+     */
+    static async getSettings() {
+        await connectToDatabase();
+        const settingsList = await Settings.find({});
+        return settingsList.reduce((acc: any, curr) => {
+            acc[curr.key] = curr.value;
+            return acc;
+        }, {});
+    }
+
+    /**
+     * Ekstraktuje tekst z pliku PDF
+     * Najpierw próbuje pdf-parse (szybkie, tekstowe), jeśli puste - Vision (wolne, ocr)
      */
     async extractTextFromPDF(filePath: string, options: OCROptions): Promise<OCRResult> {
         try {
-            // Sprawdź czy plik istnieje
-            if (!fs.existsSync(filePath)) {
+            // Sprawdź czy plik istnieje i zbuduj poprawną ścieżkę
+            let absolutePath = filePath;
+
+            // Pobierz katalog uploadów z env lub domyślny
+            const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
+
+            // Logika mapowania ścieżek
+            if (filePath.startsWith('/api/contracts/view/')) {
+                // Wyodrębnij nazwę pliku z URL API
+                const fileName = filePath.replace('/api/contracts/view/', '');
+                absolutePath = path.join(uploadDir, fileName);
+            } else if (filePath.startsWith('/uploads/')) {
+                // Obsługa starszych ścieżek
+                absolutePath = path.join(uploadDir, filePath.replace('/uploads/', ''));
+            } else if (!path.isAbsolute(filePath)) {
+                // Jeśli relatywna, weź basename (bezpiecznik)
+                absolutePath = path.join(uploadDir, path.basename(filePath));
+            } else if (filePath.startsWith('/app/uploads/') === false && filePath.includes('uploads')) {
+                // Jeśli absolutna ale poza kontenerem (np. lokalna ścieżka z dev), weź basename
+                absolutePath = path.join(uploadDir, path.basename(filePath));
+            } else if (!fs.existsSync(absolutePath)) {
+                // Ostateczny bezpiecznik: jeśli po prostu nie istnieje pod podaną ścieżką, spróbuj basename w uploadDir
+                const fallbackPath = path.join(uploadDir, path.basename(filePath));
+                if (fs.existsSync(fallbackPath)) {
+                    absolutePath = fallbackPath;
+                }
+            }
+
+            console.log(`[OCRService] Resolving path input: "${filePath}" -> Result: "${absolutePath}"`);
+
+            if (!fs.existsSync(absolutePath)) {
                 return {
                     success: false,
-                    error: 'Plik nie został znaleziony'
+                    error: `Plik nie został znaleziony: ${absolutePath} (oryginalna ścieżka: ${filePath})`
                 };
             }
 
-            // Odczytaj plik jako base64
-            const fileBuffer = fs.readFileSync(filePath);
-            const base64Content = fileBuffer.toString('base64');
-            const mimeType = this.getMimeType(filePath);
+            const fileBuffer = fs.readFileSync(absolutePath);
 
-            const response = await this.openai.chat.completions.create({
-                model: options.model,
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            {
-                                type: 'text',
-                                text: 'Proszę wyodrębnić cały tekst z tego dokumentu PDF. Zachowaj formatowanie, strukturę i wszystkie informacje. Jeśli dokument zawiera tabele, zachowaj ich strukturę. Zwróć tylko wyodrębniony tekst bez dodatkowych komentarzy.'
-                            },
-                            {
-                                type: 'image_url',
-                                image_url: {
-                                    url: `data:${mimeType};base64,${base64Content}`
+            // Próba 1: pdf-parse
+            try {
+                const data = await pdfParse(fileBuffer);
+                if (data.text && data.text.trim().length > 100) {
+                    return {
+                        success: true,
+                        extractedText: data.text,
+                        modelUsed: 'pdf-parse'
+                    };
+                }
+            } catch (e) {
+                console.warn('pdf-parse failed, falling back to Vision:', e);
+            }
+
+            // Próba 2: Vision API (tylko dla obrazów/skanów)
+            // Uwaga: OpenAI Vision nie obsługuje PDF bezpośrednio, trzeba by go zamienić na obrazy.
+            // Tymczasem ograniczymy się do błędu jeśli pdf-parse zawiedzie a to nie obraz.
+            const ext = path.extname(absolutePath).toLowerCase();
+            if (ext !== '.pdf') {
+                const base64Content = fileBuffer.toString('base64');
+                const mimeType = this.getMimeType(absolutePath);
+
+                const response = await this.openai.chat.completions.create({
+                    model: options.model,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: 'Proszę wyodrębnić cały tekst z tego obrazu. Zachowaj strukturę. Zwróć tylko tekst.'
+                                },
+                                {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: `data:${mimeType};base64,${base64Content}`
+                                    }
                                 }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: options.maxTokens || 4000,
-                temperature: options.temperature || 0.1
-            });
+                            ]
+                        }
+                    ],
+                    max_tokens: options.maxTokens || 4000,
+                    temperature: options.temperature || 0.1
+                });
 
-            const extractedText = response.choices[0]?.message?.content;
-
-            if (!extractedText) {
                 return {
-                    success: false,
-                    error: 'Nie udało się wyodrębnić tekstu z dokumentu'
+                    success: true,
+                    extractedText: response.choices[0]?.message?.content || '',
+                    modelUsed: options.model
                 };
             }
 
             return {
-                success: true,
-                extractedText,
-                modelUsed: options.model
+                success: false,
+                error: 'Nie udało się wyodrębnić tekstu z pliku PDF (pusty lub zakodowany jako obraz)'
             };
-
         } catch (error) {
             console.error('Błąd OCR:', error);
 
@@ -122,7 +182,7 @@ export class OCRService {
                 messages: [
                     {
                         role: 'system',
-                        content: 'Jesteś ekspertem prawnym. Przeanalizuj tekst umowy i stwórz profesjonalne podsumowanie zawierające: kluczowe warunki, daty, strony umowy, obowiązki, prawa, ograniczenia i ryzyka.'
+                        content: 'Jesteś specjalistą od spraw kancelaryjnych w firmie, podsumuj ten dokument w kilku zdaniach, jeżeli to umowa to w podsumowaniu zaznacz: Kogo z kim łączy, czego dotyczy, od kiedy obowiązuje, do kiedy obowiązuje, czy przewiduje płatności miesięczne, jaki ma termin wypowiedzenia, jeżeli są w niej określone adresy email lub osoby kontaktowe, lub dane kontaktowe niech te dane będą w twoim podsumowaniu.'
                     },
                     {
                         role: 'user',

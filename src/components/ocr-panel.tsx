@@ -8,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Bot, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface OCROptions {
-    apiKey: string;
-    model: string;
     action: 'ocr' | 'summary';
 }
 
@@ -47,35 +45,20 @@ const AVAILABLE_MODELS = [
 ];
 
 export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelProps) {
-    const [apiKey, setApiKey] = useState('');
-    const [selectedModel, setSelectedModel] = useState('gpt-4o');
-    const [showApiKey, setShowApiKey] = useState(false);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<OCRStatus | null>(null);
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorType, setErrorType] = useState<string | null>(null);
+    const [showErrorDetail, setShowErrorDetail] = useState(false);
 
-    // Pobierz status OCR i ustawienia
+    // Pobierz status OCR
     const fetchData = async () => {
         try {
-            const [statusRes, settingsRes] = await Promise.all([
-                fetch(`/api/contracts/${contractId}/ocr`),
-                fetch('/api/admin/settings')
-            ]);
-
+            const statusRes = await fetch(`/api/contracts/${contractId}/ocr`);
             if (statusRes.ok) {
                 const data = await statusRes.json();
                 setStatus(data.data);
-            }
-
-            if (settingsRes.ok) {
-                const settingsData = await settingsRes.json();
-                if (settingsData.openai_api_key) {
-                    setApiKey(settingsData.openai_api_key);
-                }
-                if (settingsData.default_model) {
-                    setSelectedModel(settingsData.default_model);
-                }
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -96,8 +79,6 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    apiKey,
-                    model: selectedModel,
                     action
                 } as OCROptions),
             });
@@ -110,6 +91,7 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
                 onUpdate?.(); // Powiadom komponent nadrzędny o aktualizacji
             } else {
                 setError(data.error || 'Wystąpił błąd podczas przetwarzania');
+                setErrorType(data.errorType || 'UNKNOWN_ERROR');
             }
         } catch (error) {
             console.error('OCR error:', error);
@@ -158,55 +140,8 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
                     </div>
                 )}
 
-                {/* Konfiguracja API */}
-                <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="apiKey">Klucz API OpenAI</Label>
-                        <div className="relative">
-                            <Input
-                                id="apiKey"
-                                type={showApiKey ? 'text' : 'password'}
-                                placeholder="sk-..."
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                className="pr-10"
-                            />
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-0 top-0 h-full px-3"
-                                onClick={() => setShowApiKey(!showApiKey)}
-                            >
-                                {showApiKey ? (
-                                    <EyeOff className="h-4 w-4" />
-                                ) : (
-                                    <Eye className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </div>
-                        {apiKey && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Masked: {maskApiKey(apiKey)}
-                            </p>
-                        )}
-                    </div>
-
-                    <div>
-                        <Label htmlFor="model">Model AI</Label>
-                        <select
-                            id="model"
-                            value={selectedModel}
-                            onChange={(e) => setSelectedModel(e.target.value)}
-                            className="w-full p-2 border rounded-md"
-                        >
-                            {AVAILABLE_MODELS.map((model) => (
-                                <option key={model.id} value={model.id}>
-                                    {model.name} - {model.description}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                <div className="text-sm text-muted-foreground italic">
+                    Analiza AI korzysta z ustawień globalnych administratora.
                 </div>
 
                 {/* Akcje OCR */}
@@ -214,7 +149,7 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
                     <div className="flex gap-2">
                         <Button
                             onClick={() => handleOCRAction('ocr')}
-                            disabled={loading || !apiKey.trim()}
+                            disabled={loading}
                             className="flex-1"
                         >
                             {loading ? (
@@ -227,7 +162,7 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
 
                         <Button
                             onClick={() => handleOCRAction('summary')}
-                            disabled={loading || !apiKey.trim() || !status?.hasOcrText}
+                            disabled={loading || !status?.hasOcrText}
                             variant="secondary"
                             className="flex-1"
                         >
@@ -249,8 +184,41 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
 
                 {/* Błędy */}
                 {error && (
-                    <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-                        <p className="text-sm text-red-600">{error}</p>
+                    <div className="space-y-2">
+                        <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                            <p className="text-sm text-red-600 flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4" />
+                                {error}
+                            </p>
+                            <Button
+                                variant="link"
+                                className="text-xs text-red-700 h-auto p-0 mt-1"
+                                onClick={() => setShowErrorDetail(!showErrorDetail)}
+                            >
+                                {showErrorDetail ? 'Ukryj szczegóły' : 'Pokaż szczegóły i pomoc'}
+                            </Button>
+                        </div>
+
+                        {showErrorDetail && (
+                            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2 shadow-inner">
+                                <p><strong>Typ błędu:</strong> {errorType}</p>
+                                <div className="space-y-1">
+                                    <p className="font-semibold">Możliwe kroki naprawcze:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        {errorType === 'API_KEY_MISSING' && (
+                                            <li>Przejdź do <strong>Administracja &gt; Ustawienia</strong> i skonfiguruj klucz API OpenAI.</li>
+                                        )}
+                                        {errorType === 'MODEL_NOT_AVAILABLE' && (
+                                            <li>Twój klucz API nie obsługuje wybranego modelu. Zmień model w ustawieniach systemu na taki, do którego masz dostęp.</li>
+                                        )}
+                                        {errorType === 'FILE_ERROR' && (
+                                            <li>Plik PDF może być uszkodzony lub niedostępny na serwerze.</li>
+                                        )}
+                                        <li>Sprawdź połączenie z internetem i status serwerów OpenAI.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -287,6 +255,6 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
                     </div>
                 )}
             </CardContent>
-        </Card>
+        </Card >
     );
 }

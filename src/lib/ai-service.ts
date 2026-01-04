@@ -19,9 +19,12 @@ export interface ContractDescription {
 
 export async function generateContractDescription(
     contractText: string,
-    originalFileName: string
+    originalFileName: string,
+    options?: { apiKey?: string; model?: string }
 ): Promise<ContractDescription> {
     try {
+        const client = options?.apiKey ? new OpenAI({ apiKey: options.apiKey }) : openai;
+        const model = options?.model || "gpt-4o-mini";
         const prompt = `
 Przeanalizuj poniższy tekst umowy i wygeneruj szczegółowy opis w języku polskim. 
 Uwzględnij następujące elementy:
@@ -53,8 +56,8 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
 }
 `;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+        const response = await client.chat.completions.create({
+            model: model,
             messages: [
                 {
                     role: "system",
@@ -95,18 +98,5 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
     } catch (error) {
         console.error('Error generating contract description:', error);
         throw new Error('Nie udało się wygenerować opisu umowy');
-    }
-}
-
-export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
-    // This would typically use a PDF parsing library like pdf-parse
-    // For now, we'll return a placeholder
-    try {
-        const pdfParse = require('pdf-parse');
-        const data = await pdfParse(pdfBuffer);
-        return data.text;
-    } catch (error) {
-        console.error('Error extracting text from PDF:', error);
-        throw new Error('Nie udało się wyodrębnić tekstu z PDF');
     }
 }

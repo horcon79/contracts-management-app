@@ -19,36 +19,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const { id } = await params;
         const body = await request.json();
-        let { apiKey, model, action } = body;
+        let { action } = body;
 
-        // Fetch settings if not provided
-        if (!apiKey || !model) {
-            const Settings = (await import('@/models/Settings')).default;
-            const settings = await Settings.find({});
-            const settingsObj = settings.reduce((acc: any, curr) => {
-                acc[curr.key] = curr.value;
-                return acc;
-            }, {});
-
-            if (!apiKey && settingsObj.openai_api_key) {
-                apiKey = settingsObj.openai_api_key;
-            }
-            if (!model && settingsObj.default_model) {
-                model = settingsObj.default_model;
-            }
-        }
+        // Fetch settings
+        const settingsObj = await OCRService.getSettings();
+        let apiKey = settingsObj.openai_api_key;
+        let model = settingsObj.default_model || 'gpt-4o';
 
         if (!apiKey) {
-            return NextResponse.json({ error: 'Klucz API jest wymagany (podaj go ręcznie lub skonfiguruj w ustawieniach)' }, { status: 400 });
-        }
-        if (!model) {
-            model = 'gpt-4o';
+            return NextResponse.json({
+                error: 'Klucz API OpenAI nie jest skonfigurowany w ustawieniach systemu.',
+                errorType: 'API_KEY_MISSING'
+            }, { status: 400 });
         }
 
         // Sprawdź czy kontrakt istnieje
         const contract = await Contract.findById(id);
         if (!contract) {
-            return NextResponse.json({ error: 'Kontrakt nie został znaleziony' }, { status: 404 });
+            return NextResponse.json({
+                error: 'Kontrakt nie został znaleziony',
+                errorType: 'CONTRACT_NOT_FOUND'
+            }, { status: 404 });
         }
 
         const ocrService = new OCRService(apiKey);
@@ -57,7 +48,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const modelAvailable = await ocrService.checkModelAvailability(model, apiKey);
         if (!modelAvailable) {
             return NextResponse.json({
-                error: `Model ${model} nie jest dostępny dla tego klucza API`
+                error: `Model ${model} nie jest dostępny dla Twojego klucza API. Sprawdź konfigurację w Admin > Ustawienia.`,
+                errorType: 'MODEL_NOT_AVAILABLE'
             }, { status: 400 });
         }
 

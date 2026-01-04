@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import Contract from '@/models/Contract';
-import { generateContractDescription, extractTextFromPDF } from '@/lib/ai-service';
-import connectDB from '@/lib/mongodb';
+import { generateContractDescription } from '@/lib/ai-service';
+import { connectToDatabase } from '@/lib/mongodb';
+import { OCRService } from '@/lib/ocr-service';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -21,7 +22,19 @@ export async function POST(
             );
         }
 
-        await connectDB();
+        await connectToDatabase();
+
+        // Fetch settings
+        const settingsObj = await OCRService.getSettings();
+        const apiKey = settingsObj.openai_api_key;
+        const model = settingsObj.default_model || 'gpt-4o-mini';
+
+        if (!apiKey) {
+            return NextResponse.json(
+                { error: 'Klucz API OpenAI nie jest skonfigurowany w ustawieniach systemu.' },
+                { status: 400 }
+            );
+        }
 
         const contract = await Contract.findById(id);
 
@@ -40,18 +53,32 @@ export async function POST(
         } else {
             // W przeciwnym razie spróbujmy wyodrębnić tekst z PDF
             try {
-                const pdfPath = path.join(process.cwd(), contract.pdfPath);
-                const pdfBuffer = await fs.readFile(pdfPath);
-                contractText = await extractTextFromPDF(pdfBuffer);
+                const ocrService = new OCRService(apiKey);
+                const result = await ocrService.extractTextFromPDF(contract.pdfPath, {
+                    apiKey,
+                    model
+                });
+
+                if (result.success && result.extractedText) {
+                    contractText = result.extractedText;
+                    // Zapisujemy wyodrębniony tekst
+                    contract.ocrText = contractText;
+                    await contract.save();
+                } else {
+                    throw new Error(result.error || 'Nie można wyodrębnić tekstu z PDF');
+                }
             } catch (error) {
                 console.error('Error reading PDF:', error);
-                throw new Error('Nie można odczytać pliku PDF');
+                return NextResponse.json(
+                    { error: error instanceof Error ? error.message : 'Nie można odczytać pliku PDF' },
+                    { status: 500 }
+                );
             }
         }
 
-        if (!contractText.trim()) {
+        if (!contractText || !contractText.trim()) {
             return NextResponse.json(
-                { error: 'Nie można wyodrębnić tekstu z umowy' },
+                { error: 'Dokument jest pusty lub nie udało się wyodrębnić tekstu' },
                 { status: 400 }
             );
         }
@@ -59,7 +86,8 @@ export async function POST(
         // Generuj opis przez AI
         const aiDescription = await generateContractDescription(
             contractText,
-            contract.originalFileName
+            contract.originalFileName,
+            { apiKey, model }
         );
 
         // Aktualizuj umowę w bazie danych

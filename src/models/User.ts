@@ -40,6 +40,7 @@ const UserSchema = new Schema<IUser>(
         adUsername: {
             type: String,
             sparse: true,
+            index: true,
         },
         isActive: {
             type: Boolean,
@@ -50,9 +51,6 @@ const UserSchema = new Schema<IUser>(
         timestamps: true,
     }
 );
-
-UserSchema.index({ email: 1 });
-UserSchema.index({ adUsername: 1 });
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
