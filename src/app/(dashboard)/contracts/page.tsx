@@ -19,6 +19,7 @@ interface Contract {
         client?: string;
         status?: string;
         contractDate?: string;
+        endDate?: string;
     };
     createdAt: string;
     createdBy?: {
@@ -191,6 +192,10 @@ function ContractsContent() {
                                                 {contract.createdBy.name}
                                             </div>
                                         )}
+                                        <div>
+                                            <span className="text-muted-foreground">Koniec: </span>
+                                            {contract.metadata.endDate ? formatDate(contract.metadata.endDate) : 'nie określona'}
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>

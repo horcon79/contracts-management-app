@@ -106,7 +106,7 @@ export function Sidebar() {
 
                 <div className="mt-4 px-3">
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Wersja</p>
-                    <p className="text-xs font-mono text-muted-foreground">v1.0.9</p>
+                    <p className="text-xs font-mono text-muted-foreground">v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
                 </div>
             </div>
         </div>

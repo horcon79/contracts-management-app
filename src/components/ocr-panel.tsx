@@ -247,11 +247,7 @@ export function OCRPanel({ contractId, ocrText, aiSummary, onUpdate }: OCRPanelP
                             </div>
                         )}
 
-                        {result.maskedApiKey && (
-                            <p className="text-xs text-muted-foreground">
-                                Użyty API key: {result.maskedApiKey}
-                            </p>
-                        )}
+                        {/* API Key display removed for security */}
                     </div>
                 )}
             </CardContent>

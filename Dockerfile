@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Next.js application
 # Stage 1: Dependencies
 FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat poppler-utils tesseract-ocr tesseract-ocr-data-pol
 WORKDIR /app
 
 # Copy package files
@@ -25,6 +25,7 @@ RUN npm run build
 
 # Stage 3: Runtime
 FROM node:22-alpine AS runner
+RUN apk add --no-cache libc6-compat poppler-utils tesseract-ocr tesseract-ocr-data-pol
 WORKDIR /app
 
 # Create app user for security

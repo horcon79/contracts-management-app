@@ -99,21 +99,40 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         return NextResponse.json({
             success: result.success,
-            data: result,
-            maskedApiKey: OCRService.maskApiKey(apiKey)
+            data: result
         });
 
     } catch (error) {
         console.error('Błąd OCR API:', error);
 
-        // Sanitize error message for client
-        const errorMessage = error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd';
-        const sanitizedMessage = errorMessage.includes('sk-')
-            ? 'Wystąpił błąd autoryzacji API (szczegóły w logach serwera)'
-            : errorMessage;
+        let errorMessage = 'Wystąpił nieoczekiwany błąd';
+        let errorType = 'UNKNOWN_ERROR';
+        const rawError = error instanceof Error ? error.message : String(error);
+
+        // Mask API key in any raw error message
+        const sanitizedError = rawError.replace(/sk-[a-zA-Z0-9]{32,}/g, '***API-KEY***');
+
+        if (rawError.includes('EACCES')) {
+            errorMessage = 'Błąd uprawnień serwera (EACCES). Nie można zapisać plików tymczasowych.';
+            errorType = 'SERVER_PERMISSION_ERROR';
+        } else if (rawError.includes('ENOENT')) {
+            errorMessage = 'Błąd plików tymczasowych (ENOENT). Katalog nie istnieje.';
+            errorType = 'FILE_SYSTEM_ERROR';
+        } else if (rawError.includes('401') || rawError.includes('Invalid API key')) {
+            errorMessage = 'Nieprawidłowy klucz API OpenAI (401). Sprawdź konfigurację.';
+            errorType = 'AUTH_ERROR';
+        } else if (rawError.includes('429')) {
+            errorMessage = 'Przekroczono limit zapytań OpenAI (429).';
+            errorType = 'RATE_LIMIT_ERROR';
+        } else {
+            // General fallback, masking potential secrets
+            errorMessage = `Błąd przetwarzania: ${sanitizedError}`;
+        }
 
         return NextResponse.json({
-            error: sanitizedMessage
+            error: errorMessage,
+            errorType: errorType,
+            details: process.env.NODE_ENV === 'development' ? sanitizedError : undefined
         }, { status: 500 });
     }
 }

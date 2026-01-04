@@ -34,10 +34,15 @@ export async function GET(
 
         const fileBuffer = await readFile(filepath);
 
+        const url = new URL(request.url);
+        const isDownload = url.searchParams.get('download') === 'true';
+
         return new NextResponse(fileBuffer, {
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `inline; filename="${filename}"`,
+                'Content-Disposition': isDownload
+                    ? `attachment; filename="${filename}"`
+                    : `inline; filename="${filename}"`,
             },
         });
     } catch (error) {

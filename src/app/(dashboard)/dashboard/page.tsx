@@ -18,6 +18,8 @@ export default async function DashboardPage() {
         Contract.countDocuments({ 'metadata.status': 'Aktywna' }),
         Contract.countDocuments({
             'metadata.endDate': {
+                $exists: true,
+                $ne: null,
                 $gte: new Date(),
                 $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             }

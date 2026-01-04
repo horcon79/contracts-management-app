@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/mongodb';
 import Contract from '@/models/Contract';
+import Note from '@/models/Note';
 
 export async function GET(request: NextRequest) {
     try {
@@ -22,12 +23,22 @@ export async function GET(request: NextRequest) {
         const query: Record<string, unknown> = {};
 
         if (search) {
+            // Find notes matching the search criteria
+            const matchingNotes = await Note.find({
+                content: { $regex: search, $options: 'i' }
+            }).select('contractId');
+
+            const contractIdsFromNotes = matchingNotes.map(note => note.contractId);
+
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
+                { contractNumber: { $regex: search, $options: 'i' } },
                 { originalFileName: { $regex: search, $options: 'i' } },
                 { ocrText: { $regex: search, $options: 'i' } },
                 { description: { $regex: search, $options: 'i' } },
-                { aiSummary: { $regex: search, $options: 'i' } }
+                { aiSummary: { $regex: search, $options: 'i' } },
+                { 'metadata.client': { $regex: search, $options: 'i' } },
+                { _id: { $in: contractIdsFromNotes } }
             ];
         }
         if (status) {

@@ -11,10 +11,47 @@ export interface ContractDescription {
     client?: string;
     value?: number;
     dates?: {
-        contractDate?: Date;
-        startDate?: Date;
-        endDate?: Date;
+        contractDate?: Date | string;
+        startDate?: Date | string;
+        endDate?: Date | string;
     };
+}
+
+/**
+ * Robustly parses a date string from AI, supporting common formats like DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD
+ */
+function parseAIDate(dateStr: any): Date | undefined {
+    if (!dateStr || typeof dateStr !== 'string') return undefined;
+
+    // Clean string
+    const cleanStr = dateStr.trim();
+    if (!cleanStr) return undefined;
+
+    // Try standard JS parsing (works for ISO YYYY-MM-DD)
+    const date = new Date(cleanStr);
+    if (!isNaN(date.getTime())) return date;
+
+    // Try DD.MM.YYYY (Common in Poland)
+    const dotMatch = cleanStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (dotMatch) {
+        const day = parseInt(dotMatch[1], 10);
+        const month = parseInt(dotMatch[2], 10) - 1;
+        const year = parseInt(dotMatch[3], 10);
+        const res = new Date(year, month, day);
+        if (!isNaN(res.getTime())) return res;
+    }
+
+    // Try DD-MM-YYYY
+    const dashMatch = cleanStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (dashMatch) {
+        const day = parseInt(dashMatch[1], 10);
+        const month = parseInt(dashMatch[2], 10) - 1;
+        const year = parseInt(dashMatch[3], 10);
+        const res = new Date(year, month, day);
+        if (!isNaN(res.getTime())) return res;
+    }
+
+    return undefined;
 }
 
 export async function generateContractDescription(
@@ -49,9 +86,9 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
   "client": "nazwa klienta (opcjonalnie)",
   "value": "wartość umowy (opcjonalnie)",
   "dates": {
-    "contractDate": "data zawarcia (opcjonalnie)",
-    "startDate": "data rozpoczęcia (opcjonalnie)",
-    "endDate": "data zakończenia (opcjonalnie)"
+    "contractDate": "data zawarcia (format ISO YYYY-MM-DD, opcjonalnie)",
+    "startDate": "data rozpoczęcia (format ISO YYYY-MM-DD, opcjonalnie)",
+    "endDate": "data zakończenia (format ISO YYYY-MM-DD, opcjonalnie)"
   }
 }
 `;
@@ -89,7 +126,11 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
                 contractType: parsedResponse.contractType,
                 client: parsedResponse.client,
                 value: parsedResponse.value ? parseFloat(parsedResponse.value) : undefined,
-                dates: parsedResponse.dates || {},
+                dates: {
+                    contractDate: parseAIDate(parsedResponse.dates?.contractDate),
+                    startDate: parseAIDate(parsedResponse.dates?.startDate),
+                    endDate: parseAIDate(parsedResponse.dates?.endDate),
+                },
             };
         } catch (parseError) {
             console.warn('Failed to parse AI JSON, falling back to raw text:', parseError);

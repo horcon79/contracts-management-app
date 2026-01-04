@@ -6,18 +6,20 @@
 
 ## Stack Technologiczny
 
-- **Frontend:** Next.js 15+ (App Router) + Tailwind CSS + shadcn/ui
-- **Backend:** Node.js + TypeScript
-- **Baza danych:** MongoDB
-- **Autoryzacja:** NextAuth.js
-- **AI/OCR:** OpenAI API (GPT-4o, GPT-4 Turbo)
+* **Frontend:** Next.js 15+ (App Router) + Tailwind CSS + shadcn/ui
+* **Backend:** Node.js + TypeScript
+* **Baza danych:** MongoDB
+* **Autoryzacja:** NextAuth.js
+* **AI/OCR:** OpenAI API (GPT-4o-mini) + Tesseract OCR (Hybrid Mode)
+* **Narzędzia PDF:** `poppler-utils` (pdftoppm), `pdf-parse`
 
 ## Wymagania
 
-- Node.js 18+
-- MongoDB (lokalna lub MongoDB Atlas)
-- Klucz API OpenAI (dla funkcji OCR i AI)
-- npm lub yarn
+* Node.js 18+
+* MongoDB (lokalna lub MongoDB Atlas)
+* Klucz API OpenAI (dla funkcji OCR i AI)
+* npm lub yarn
+* **Systemowe (Linux/Docker):** `poppler-utils`, `tesseract-ocr`, `tesseract-ocr-data-pol`
 
 ## Instalacja
 
@@ -55,8 +57,8 @@
    ```
 
    To utworzy:
-   - Użytkownika admin: `admin@example.com` / `admin123`
-   - Domyślne słowniki (statusy, typy umów, kategorie)
+   * Użytkownika admin: `admin@example.com` / `admin123`
+   * Domyślne słowniki (statusy, typy umów, kategorie)
 
 6. **Uruchom aplikację w trybie deweloperskim:**
 
@@ -72,35 +74,34 @@
 
 Domyślne dane logowania:
 
-- **Email:** <admin@example.com>
-- **Hasło:** admin123
+* **Email:** <admin@example.com>
+* **Hasło:** admin123
 
 ## Funkcjonalności
 
 ### Zaimplementowane ✅
 
-- [x] System autoryzacji z rolami (Admin, Edycja, Odczyt)
-- [x] Dashboard z przeglądem systemu
-- [x] CRUD dla umów (dodawanie, edycja, usuwanie)
-- [x] Upload plików PDF z drag & drop
-- [x] Zarządzanie słownikami (klienci, typy umów, statusy, kategorie, osoby)
-- [x] System notatek dla każdej umowy
-- [x] Wyszukiwarka umów
-- [x] Responsywny interfejs użytkownika
-- [x] **OCR - ekstrakcja tekstu z PDF** (OpenAI GPT-4o)
-- [x] **AI - podsumowania umów** (OpenAI GPT-4o, GPT-4 Turbo)
-- [x] **Bezpieczne zarządzanie kluczami API** (maskowanie, walidacja)
-- [x] **Wybór modelu AI** (GPT-4o, GPT-4o Mini, GPT-4 Turbo)
-- [X] Przeglądarka PDF w aplikacji
-- [X] Panel administracyjny użytkowników i ustawienia (dodawanie klucza API OpenaAI)
+* [x] System autoryzacji z rolami (Admin, Edycja, Odczyt)
+* [x] Dashboard z przeglądem systemu
+* [x] CRUD dla umów (dodawanie, edycja, usuwanie)
+* [x] Upload plików PDF z drag & drop
+* [x] Zarządzanie słownikami (klienci, typy umów, statusy, kategorie, osoby)
+* [x] System notatek dla każdej umowy
+* [x] Wyszukiwarka umów
+* [x] Responsywny interfejs użytkownika
+* [x] **Hybrid OCR** - ekstrakcja tekstu z PDF (płaskie pliki) i skanów (obrazy) przy użyciu Tesseract OCR + OpenAI Vision
+* [x] **AI** - podsumowania umów (GPT-4o)
+* [x] **Pobieranie plików** - możliwość pobrania oryginalnego PDF
+* [x] **Formularze** - autouzupełnianie danych klienta (NIP, adres)
+* [x] **Bezpieczne zarządzanie kluczami API** (maskowanie, walidacja)
+* [x] **Wersjonowanie** - automatyczne wyświetlanie wersji aplikacji
 
 ### Do implementacji w kolejnych fazach 🚧
 
-- [ ] Vector Search - wyszukiwanie semantyczne
-- [ ] Powiadomienia mailowe - konfiguracja servera SMTP - powiadomienia o nowej umowie dodanej do bazy do osoby odpowiedzialnej, powiadomienia o zbliżającym się terminie ważności 14 dni przed. 
-- [ ] Chat z umową (RAG z LangChain)
-- [ ] Integracja z Windows Domain (LDAP)
-
+* [ ] Vector Search - wyszukiwanie semantyczne
+* [ ] Powiadomienia mailowe - konfiguracja servera SMTP - powiadomienia o nowej umowie dodanej do bazy do osoby odpowiedzialnej, powiadomienia o zbliżającym się terminie ważności 14 dni przed.
+* [ ] Chat z umową (RAG z LangChain)
+* [ ] Integracja z Windows Domain (LDAP)
 
 ## Struktura projektu
 
@@ -144,57 +145,55 @@ contracts-app/
 
 ### Autoryzacja
 
-- `POST /api/auth/[...nextauth]` - NextAuth handlers
+* `POST /api/auth/[...nextauth]` - NextAuth handlers
 
 ### Umowy
 
-- `GET /api/contracts` - Lista umów (z paginacją i filtrowaniem)
-- `POST /api/contracts` - Dodanie nowej umowy
-- `GET /api/contracts/:id` - Szczegóły umowy
-- `PUT /api/contracts/:id` - Aktualizacja umowy
-- `DELETE /api/contracts/:id` - Usunięcie umowy
-- `POST /api/contracts/upload` - Upload pliku PDF
-- `GET /api/contracts/:id/notes` - Notatki do umowy
-- `POST /api/contracts/:id/notes` - Dodanie notatki
-- `POST /api/contracts/:id/ocr` - **OCR i generowanie podsumowań AI**
-- `GET /api/contracts/:id/ocr` - **Status OCR umowy**
+* `GET /api/contracts` - Lista umów (z paginacją i filtrowaniem)
+* `POST /api/contracts` - Dodanie nowej umowy
+* `GET /api/contracts/:id` - Szczegóły umowy
+* `PUT /api/contracts/:id` - Aktualizacja umowy
+* `DELETE /api/contracts/:id` - Usunięcie umowy
+* `POST /api/contracts/upload` - Upload pliku PDF
+* `GET /api/contracts/:id/notes` - Notatki do umowy
+* `POST /api/contracts/:id/notes` - Dodanie notatki
+* `POST /api/contracts/:id/ocr` - **Hybrid OCR i generowanie podsumowań AI**
+* `GET /api/contracts/:id/ocr` - **Status OCR umowy**
+* `GET /api/contracts/view/:filename?download=true` - **Pobieranie PDF**
 
 ### Słowniki
 
-- `GET /api/dictionaries?type=TYPE` - Lista słowników danego typu
-- `POST /api/dictionaries` - Dodanie elementu słownika
-- `PUT /api/dictionaries/:id` - Aktualizacja elementu
-- `DELETE /api/dictionaries/:id` - Usunięcie elementu
+* `GET /api/dictionaries?type=TYPE` - Lista słowników danego typu
+* `POST /api/dictionaries` - Dodanie elementu słownika
+* `PUT /api/dictionaries/:id` - Aktualizacja elementu
+* `DELETE /api/dictionaries/:id` - Usunięcie elementu
 
 ## Funkcjonalność OCR i AI
 
 ### Możliwości
 
-- **Ekstrakcja tekstu z PDF:** Automatyczne rozpoznawanie tekstu z przesłanych dokumentów PDF
-- **Generowanie podsumowań:** Inteligentne podsumowania umów z wykorzystaniem AI
-- **Wybór modelu:** Możliwość wyboru między GPT-4o, GPT-4o Mini, GPT-4 Turbo
-- **Bezpieczeństwo:** Maskowanie kluczy API, walidacja uprawnień użytkowników
-- **Status przetwarzania:** Monitorowanie postępu OCR i generowania podsumowań
+* **Hybrid OCR:** Automatyczne rozpoznawanie tekstu z przesłanych dokumentów PDF (zarówno tekstowych jak i skanów/obrazów) przy użyciu Tesseract OCR. W przypadku problemów, system automatycznie próbuje użyć OpenAI Vision.
+* **Generowanie podsumowań:** Inteligentne podsumowania umów z wykorzystaniem AI (GPT-4o).
+* **Bezpieczeństwo:** Maskowanie kluczy API, walidacja uprawnień użytkowników.
+* **Status przetwarzania:** Monitorowanie postępu OCR i generowania podsumowań.
 
 ### Użycie
 
 1. Przejdź do szczegółów umowy
 2. W sekcji "OCR i AI" wprowadź klucz API OpenAI
-3. Wybierz odpowiedni model AI
-4. Kliknij "Wyodrębnij tekst (OCR)" aby rozpoznać tekst z PDF
-5. Kliknij "Generuj podsumowanie" aby stworzyć AI podsumowanie
+3. Kliknij "Wyodrębnij tekst (OCR)" aby rozpoznać tekst z PDF
+4. Kliknij "Generuj podsumowanie" aby stworzyć AI podsumowanie
 
 ### Dostępne modele
 
-- **GPT-4o:** Najnowszy model multimodalny, najlepszy dla OCR i analizy dokumentów
-- **GPT-4o Mini:** Szybszy i tańszy model, dobry dla podstawowych zadań OCR
-- **GPT-4 Turbo:** Wydajny model do analizy złożonych dokumentów
+* **GPT-4o:** Najnowszy model multimodalny, najlepszy dla OCR i analizy dokumentów.
+* **Tesseract OCR (język polski):** Wykorzystywany jako podstawowy silnik OCR dla skanów, zapewniając szybkość i prywatność (działa lokalnie).
 
 ## Role użytkowników
 
-- **Admin** - pełny dostęp, zarządzanie użytkownikami, OCR i AI
-- **Edycja** - dodawanie i edycja umów, słowników, OCR i AI
-- **Odczyt** - tylko przeglądanie (brak dostępu do OCR i AI)
+* **Admin** - pełny dostęp, zarządzanie użytkownikami, OCR i AI
+* **Edycja** - dodawanie i edycja umów, słowników, OCR i AI
+* **Odczyt** - tylko przeglądanie (brak dostępu do OCR i AI)
 
 ## Licencja
 

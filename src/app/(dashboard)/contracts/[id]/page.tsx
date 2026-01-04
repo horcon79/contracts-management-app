@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ArrowLeft, Trash2, Send, Bot, MessageCircle, Sparkles, Loader2, Pencil, X, Check } from 'lucide-react';
+import { FileText, ArrowLeft, Trash2, Send, Bot, MessageCircle, Sparkles, Loader2, Pencil, X, Check, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
@@ -325,10 +325,25 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Przeglądarka PDF
-                            </CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5" />
+                                    Przeglądarka PDF
+                                </CardTitle>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const url = contract.pdfPath.startsWith('/api')
+                                            ? `${contract.pdfPath}?download=true`
+                                            : `/api/contracts/view/${contract.pdfPath}?download=true`;
+                                        window.open(url, '_blank');
+                                    }}
+                                >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Pobierz
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="h-[600px]">
