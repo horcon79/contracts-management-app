@@ -48,7 +48,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-your-openai-api-key}
       # Auth
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-change-in-production}
-      - NEXTAUTH_URL=http://localhost:${APP_PORT:-3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       # LDAP/AD (optional)
       - LDAP_URL=${LDAP_URL:-ldap://your-domain-controller:389}
       - LDAP_BIND_DN=${LDAP_BIND_DN:-cn=admin,dc=example,dc=com}

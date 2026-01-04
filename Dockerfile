@@ -25,7 +25,7 @@ RUN npm run build
 
 # Stage 3: Runtime
 FROM node:22-alpine AS runner
-RUN apk add --no-cache libc6-compat poppler-utils tesseract-ocr tesseract-ocr-data-pol
+RUN apk add --no-cache libc6-compat poppler-utils tesseract-ocr tesseract-ocr-data-pol curl
 WORKDIR /app
 
 # Create app user for security
