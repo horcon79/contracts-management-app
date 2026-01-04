@@ -90,11 +90,14 @@ Domyślne dane logowania:
 * [x] Wyszukiwarka umów
 * [x] Responsywny interfejs użytkownika
 * [x] **Hybrid OCR** - ekstrakcja tekstu z PDF (płaskie pliki) i skanów (obrazy) przy użyciu Tesseract OCR + OpenAI Vision
-* [x] **AI** - podsumowania umów (GPT-4o)
+* [x] **AI** - podsumowania umów (GPT-4o) i interaktywny modal na liście umów
 * [x] **Pobieranie plików** - możliwość pobrania oryginalnego PDF
-* [x] **Formularze** - autouzupełnianie danych klienta (NIP, adres)
+* [x] **Formularze** - autouzupełnianie danych klienta (NIP, adres) oraz widok **Side-by-Side** z podglądem PDF podczas dodawania
+* [x] **Ciemny motyw (Dark Mode)** - pełne wsparcie dla trybu jasnego i ciemnego
+* [x] **Zaawansowane wyszukiwanie** - przeszukiwanie treści notatek, nazw plików i podsumowań AI
 * [x] **Bezpieczne zarządzanie kluczami API** (maskowanie, walidacja)
-* [x] **Wersjonowanie** - automatyczne wyświetlanie wersji aplikacji
+* [x] **Wersjonowanie** - automatyczne wyświetlanie wersji aplikacji i changelog
+* [x] **Powiadomienia Toast** - atrakcyjne powiadomienia o sukcesach i błędach (sonner)
 
 ### Do implementacji w kolejnych fazach 🚧
 
@@ -180,9 +183,10 @@ contracts-app/
 ### Użycie
 
 1. Przejdź do szczegółów umowy
-2. W sekcji "OCR i AI" wprowadź klucz API OpenAI
+2. W sekcji "OCR i AI" wprowadź klucz API OpenAI (jeśli nie jest skonfigurowany globalnie)
 3. Kliknij "Wyodrębnij tekst (OCR)" aby rozpoznać tekst z PDF
-4. Kliknij "Generuj podsumowanie" aby stworzyć AI podsumowanie
+4. Kliknij "Generuj podsumowanie" aby stworzyć AI podsumowanie (dostępne również w widoku listy przez przycisk "Pokaż Podsumowanie AI")
+5. Podczas dodawania nowej umowy skorzystaj z widoku **Side-by-Side**, aby wygodnie przepisywać dane z dokumentu do formularza.
 
 ### Dostępne modele
 

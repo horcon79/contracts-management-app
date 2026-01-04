@@ -100,7 +100,7 @@ contracts.example.com {
 
 ### Struktura Katalogów
 
-```
+```bash
 ./data/
 ├── mongodb/          # MongoDB data (50GB+)
 ├── mongodb_config/   # MongoDB config
@@ -330,20 +330,18 @@ NEXT_TELEMETRY_DISABLED=1
 # Pobierz nowe zmiany
 git pull
 
-# Przebuduj i uruchom
-docker-compose down
-docker-compose up --build -d
+# Restart z nowymi obrazami i przebudową (rekomendowane dla nowych wersji)
+docker compose down
+docker compose up --build -d
 ```
 
-### Aktualizacja Obrazów
+### 🆕 Co nowego (v1.2.0+)
 
-```bash
-# Pobierz najnowsze obrazy
-docker-compose pull
-
-# Restart z nowymi obrazami
-docker-compose up -d
-```
+- **Ekstremalnie szybki OCR**: Przejście na `pdftoppm` i lokalne biblioteki systemowe zamiast ciężkich wrapperów JS.
+- **Hybrydowa Inteligencja**: Automatyczne przełączanie między Tesseract (szybkość) a OpenAI Vision (maksymalna precyzja).
+- **Interaktywny Podgląd**: Widok PDF bezpośrednio w formularzu dodawania umowy – kopiuj i wklejaj dane bez wychodzenia z aplikacji.
+- **Rozszerzone Wyszukiwanie**: Błyskawiczne odnajdywanie umów po numerze, kliencie, a nawet fragmencie notatek czy podsumowania AI.
+- **Ciemny Motyw**: Pełne wsparcie dla Dark Mode (tryb automatyczny lub ręczny przełącznik).
 
 ## 📞 Wsparcie
 
@@ -388,8 +386,9 @@ cat /etc/os-release
 - [ ] Uruchomione `./scripts/start.sh`
 - [ ] Aplikacja dostępna pod `http://localhost:3000`
 - [ ] Zalogowanie się jako <admin@example.com>
-- [ ] Test upload pliku PDF
-- [ ] Test generowania opisu AI
+- [ ] Test upload pliku PDF (widok side-by-side)
+- [ ] Test generowania opisu AI (nowy modal na liście)
+- [ ] Sprawdzenie filtrów wygasających umów (highlight na liście)
 - [ ] Skonfigurowany reverse proxy (Apache2/Caddy) jeśli potrzeba
 
 **🎉 Gotowe! Aplikacja Contracts App z AI i przeglądarką PDF jest gotowa do użycia!**

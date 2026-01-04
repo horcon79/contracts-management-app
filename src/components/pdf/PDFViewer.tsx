@@ -120,7 +120,7 @@ export function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
                                 pageNumber={pageNumber}
                                 scale={scale}
                                 className="shadow-lg"
-                                renderTextLayer={false}
+                                renderTextLayer={true}
                                 renderAnnotationLayer={false}
                             />
                         </Document>

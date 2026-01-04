@@ -9,9 +9,13 @@ Wszystkie istotne zmiany w tym projekcie beda dokumentowane w tym pliku.
 - **Hybrid OCR**: Obsługa skanwanych dokumentów PDF (obrazy) za pomocą Tesseract OCR z fallbackiem do OpenAI Vision.
 - **Pobieranie PDF**: Możliwość pobrania oryginalnego pliku umowy z widoku szczegółów.
 - **Autouzupełnianie**: Automatyczne wypełnianie danych klienta (NIP, Adres, Telefon) w formularzu dodawania umowy.
+- [x] Implement Side-by-Side PDF Preview during contract upload
+- [x] Enable text selection/copying in PDFViewer
 - **Podsumowanie AI na liście**: Zmiana sposobu wyświetlania z popupu po najechaniu myszką na dedykowany przycisk "Pokaż Podsumowanie AI" otwierający czytelne okno modalne.
 - **Wyróżnienie wygasających umów**: Podkreślenie na czerwono daty zakończenia umowy, jeśli przypada w ciągu najbliższych 30 dni.
+- [x] Add End Date to contract list items
 - **Wyszukiwanie**: Rozszerzone wyszukiwanie o treść notatek, podsumowania AI oraz nazwę klienta.
+- [x] Refine "Expiring Contracts" dashboard filter (ignore empty end dates)
 - **Wygasające umowy**: Filtr w dashboardzie bierze teraz pod uwagę tylko umowy z określoną datą zakończenia.
 
 ### Zmieniono
