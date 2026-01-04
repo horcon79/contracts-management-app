@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Plus, Search, Eye, Download, X } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Download, X, Sparkles } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -22,6 +22,7 @@ interface Contract {
         endDate?: string;
     };
     createdAt: string;
+    aiSummary?: string;
     createdBy?: {
         name: string;
     };
@@ -31,6 +32,10 @@ function ContractsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialStatus = searchParams.get('status') || '';
+    const expiringParam = searchParams.get('expiring') || '';
+
+    // State for AI Summary modal
+    const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [loading, setLoading] = useState(true);
@@ -40,7 +45,7 @@ function ContractsContent() {
 
     useEffect(() => {
         fetchContracts();
-    }, [page, search, initialStatus]);
+    }, [page, search, initialStatus, expiringParam]);
 
     const fetchContracts = async () => {
         setLoading(true);
@@ -50,6 +55,7 @@ function ContractsContent() {
                 limit: '10',
                 ...(search && { search }),
                 ...(initialStatus && { status: initialStatus }),
+                ...(expiringParam && { expiring: expiringParam }),
             });
 
             const response = await fetch(`/api/contracts?${params}`);
@@ -63,6 +69,15 @@ function ContractsContent() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const isExpiringSoon = (dateStr?: string) => {
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        const today = new Date();
+        const diff = date.getTime() - today.getTime();
+        const days = diff / (1000 * 60 * 60 * 24);
+        return days > 0 && days <= 30;
     };
 
     const handleSearch = (e: React.FormEvent) => {
@@ -144,9 +159,12 @@ function ContractsContent() {
                 </Card>
             ) : (
                 <>
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 relative">
                         {contracts.map((contract) => (
-                            <Card key={contract._id}>
+                            <Card
+                                key={contract._id}
+                                className="transition-all hover:ring-1 hover:ring-primary/20"
+                            >
                                 <CardHeader className="pb-2">
                                     <div className="flex items-start justify-between">
                                         <div>
@@ -160,12 +178,24 @@ function ContractsContent() {
                                                 {contract.originalFileName}
                                             </p>
                                         </div>
-                                        <Link href={`/contracts/${contract._id}`}>
-                                            <Button variant="outline" size="sm">
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                Zobacz
-                                            </Button>
-                                        </Link>
+                                        <div className="flex gap-2">
+                                            {contract.aiSummary && (
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => setSelectedContract(contract)}
+                                                >
+                                                    <Sparkles className="mr-2 h-4 w-4" />
+                                                    Pokaż Podsumowanie AI
+                                                </Button>
+                                            )}
+                                            <Link href={`/contracts/${contract._id}`}>
+                                                <Button variant="outline" size="sm">
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    Zobacz
+                                                </Button>
+                                            </Link>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
@@ -194,12 +224,47 @@ function ContractsContent() {
                                         )}
                                         <div>
                                             <span className="text-muted-foreground">Koniec: </span>
-                                            {contract.metadata.endDate ? formatDate(contract.metadata.endDate) : 'nie określona'}
+                                            <span className={isExpiringSoon(contract.metadata.endDate) ? 'text-red-500 font-bold underline decoration-red-500' : ''}>
+                                                {contract.metadata.endDate ? formatDate(contract.metadata.endDate) : 'nie określona'}
+                                            </span>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
                         ))}
+
+                        {/* Modal for AI Summary */}
+                        {selectedContract && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+                                <Card className="w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-in zoom-in duration-200">
+                                    <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <Sparkles className="h-5 w-5" />
+                                            <CardTitle className="text-xl">Podsumowanie AI</CardTitle>
+                                        </div>
+                                        <Button variant="ghost" size="icon" onClick={() => setSelectedContract(null)}>
+                                            <X className="h-5 w-5" />
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-y-auto pt-6">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h4 className="text-sm font-semibold text-muted-foreground mb-2">Dotyczy umowy:</h4>
+                                                <p className="font-medium text-lg">{selectedContract.title}</p>
+                                            </div>
+                                            <div className="p-4 rounded-lg bg-muted/50 border border-border">
+                                                <p className="text-base leading-relaxed whitespace-pre-wrap">
+                                                    {selectedContract.aiSummary}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                    <div className="p-4 border-t flex justify-end">
+                                        <Button onClick={() => setSelectedContract(null)}>Zamknij</Button>
+                                    </div>
+                                </Card>
+                            </div>
+                        )}
                     </div>
 
                     {totalPages > 1 && (

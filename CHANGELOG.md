@@ -2,16 +2,15 @@
 
 Wszystkie istotne zmiany w tym projekcie beda dokumentowane w tym pliku.
 
-## [1.2.2] - 2026-01-04
+## [1.2.3] - 2026-01-04
 
 ### Dodano
 
 - **Hybrid OCR**: Obsługa skanwanych dokumentów PDF (obrazy) za pomocą Tesseract OCR z fallbackiem do OpenAI Vision.
 - **Pobieranie PDF**: Możliwość pobrania oryginalnego pliku umowy z widoku szczegółów.
 - **Autouzupełnianie**: Automatyczne wypełnianie danych klienta (NIP, Adres, Telefon) w formularzu dodawania umowy.
-- **Tryb ciemny**: Dodanie trybu ciemnego z przełącznikiem w nagłówku.
-- **Powiadomienia Toast**: Dodanie powiadomień Toast (sonner) dla lepszej interakcji z użytkownikiem.
-- **Nagłówek (Header)**: Dodanie nagłówka (Header) w panelu głównym.
+- **Podsumowanie AI na liście**: Zmiana sposobu wyświetlania z popupu po najechaniu myszką na dedykowany przycisk "Pokaż Podsumowanie AI" otwierający czytelne okno modalne.
+- **Wyróżnienie wygasających umów**: Podkreślenie na czerwono daty zakończenia umowy, jeśli przypada w ciągu najbliższych 30 dni.
 - **Wyszukiwanie**: Rozszerzone wyszukiwanie o treść notatek, podsumowania AI oraz nazwę klienta.
 - **Wygasające umowy**: Filtr w dashboardzie bierze teraz pod uwagę tylko umowy z określoną datą zakończenia.
 

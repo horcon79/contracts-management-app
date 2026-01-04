@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
         const search = searchParams.get('search') || '';
         const status = searchParams.get('status');
         const client = searchParams.get('client');
+        const expiring = searchParams.get('expiring');
 
         const query: Record<string, unknown> = {};
 
@@ -46,6 +47,14 @@ export async function GET(request: NextRequest) {
         }
         if (client) {
             query['metadata.client'] = client;
+        }
+        if (expiring === '30') {
+            query['metadata.endDate'] = {
+                $exists: true,
+                $ne: null,
+                $gte: new Date(),
+                $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            };
         }
 
         const total = await Contract.countDocuments(query);

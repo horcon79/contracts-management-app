@@ -487,6 +487,7 @@ settings.local.*
 *.rar
 *.7z
 dalsze_zmiany.md
+artykul.md
 # Keep important empty directories
 !uploads/.gitkeep
 !public/.gitkeep
