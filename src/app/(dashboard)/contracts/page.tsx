@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Plus, Search, Eye, Download } from 'lucide-react';
+import { FileText, Plus, Search, Eye, Download, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface Contract {
     _id: string;
     title: string;
+    contractNumber?: string;
     originalFileName: string;
     metadata: {
         client?: string;
@@ -23,7 +26,11 @@ interface Contract {
     };
 }
 
-export default function ContractsPage() {
+function ContractsContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const initialStatus = searchParams.get('status') || '';
+
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -32,7 +39,7 @@ export default function ContractsPage() {
 
     useEffect(() => {
         fetchContracts();
-    }, [page, search]);
+    }, [page, search, initialStatus]);
 
     const fetchContracts = async () => {
         setLoading(true);
@@ -41,6 +48,7 @@ export default function ContractsPage() {
                 page: page.toString(),
                 limit: '10',
                 ...(search && { search }),
+                ...(initialStatus && { status: initialStatus }),
             });
 
             const response = await fetch(`/api/contracts?${params}`);
@@ -101,6 +109,21 @@ export default function ContractsPage() {
                 <Button type="submit">Szukaj</Button>
             </form>
 
+            {initialStatus && (
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktywny filtr:</span>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => router.push('/contracts')}
+                    >
+                        Status: {initialStatus}
+                        <X className="ml-1 h-3 w-3" />
+                    </Button>
+                </div>
+            )}
+
             {loading ? (
                 <div className="text-center py-8">
                     <p className="text-muted-foreground">Ładowanie...</p>
@@ -127,6 +150,11 @@ export default function ContractsPage() {
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <CardTitle className="text-lg">{contract.title}</CardTitle>
+                                            {contract.contractNumber && (
+                                                <p className="text-xs font-mono text-blue-600 dark:text-blue-400 mb-1">
+                                                    {contract.contractNumber}
+                                                </p>
+                                            )}
                                             <p className="text-sm text-muted-foreground">
                                                 {contract.originalFileName}
                                             </p>
@@ -193,5 +221,17 @@ export default function ContractsPage() {
                 </>
             )}
         </div>
+    );
+}
+
+export default function ContractsPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        }>
+            <ContractsContent />
+        </Suspense>
     );
 }

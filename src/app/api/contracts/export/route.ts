@@ -38,11 +38,12 @@ export async function GET(request: NextRequest) {
         const contracts = await Contract.find(query).sort({ createdAt: -1 });
 
         // Generate CSV
-        const headers = ['Tytul', 'Nazwa Pliku', 'Klient', 'Typ', 'Status', 'Wartosc', 'Data Zawarcia', 'Data Utworzenia'];
+        const headers = ['Numer Umowy', 'Tytul', 'Nazwa Pliku', 'Klient', 'Typ', 'Status', 'Wartosc', 'Data Zawarcia', 'Data Utworzenia'];
         const csvRows = [headers.join(',')];
 
         for (const contract of contracts) {
             const row = [
+                `"${(contract.contractNumber || '').replace(/"/g, '""')}"`,
                 `"${(contract.title || '').replace(/"/g, '""')}"`,
                 `"${(contract.originalFileName || '').replace(/"/g, '""')}"`,
                 `"${(contract.metadata?.client || '').replace(/"/g, '""')}"`,

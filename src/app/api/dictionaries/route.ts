@@ -45,6 +45,22 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Type and name are required' }, { status: 400 });
         }
 
+        // Check if exists (including inactive)
+        const existing = await Dictionary.findOne({ type, name });
+
+        if (existing) {
+            if (existing.isActive) {
+                return NextResponse.json({ error: 'This entry already exists' }, { status: 409 });
+            } else {
+                // Restore soft-deleted item
+                existing.isActive = true;
+                existing.color = color || existing.color;
+                existing.metadata = metadata || existing.metadata;
+                await existing.save();
+                return NextResponse.json(existing, { status: 201 });
+            }
+        }
+
         const dictionary = await Dictionary.create({
             type,
             name,

@@ -106,8 +106,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     } catch (error) {
         console.error('Błąd OCR API:', error);
 
+        // Sanitize error message for client
+        const errorMessage = error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd';
+        const sanitizedMessage = errorMessage.includes('sk-')
+            ? 'Wystąpił błąd autoryzacji API (szczegóły w logach serwera)'
+            : errorMessage;
+
         return NextResponse.json({
-            error: error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd'
+            error: sanitizedMessage
         }, { status: 500 });
     }
 }
@@ -151,8 +157,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     } catch (error) {
         console.error('Błąd pobierania statusu OCR:', error);
 
+        // Sanitize error message
+        const errorMessage = error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd';
+        const sanitizedMessage = errorMessage.includes('sk-')
+            ? 'Błąd serwera (szczegóły w logach)'
+            : errorMessage;
+
         return NextResponse.json({
-            error: error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd'
+            error: sanitizedMessage
         }, { status: 500 });
     }
 }

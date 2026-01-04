@@ -276,10 +276,23 @@ export default function UploadContractPage() {
                                     id="client"
                                     value={metadata.client}
                                     onChange={(e) => {
-                                        if (e.target.value === 'ADD_NEW') {
+                                        const selectedClientName = e.target.value;
+                                        if (selectedClientName === 'ADD_NEW') {
                                             setIsClientModalOpen(true);
                                         } else {
-                                            setMetadata({ ...metadata, client: e.target.value });
+                                            const selectedClient = clients.find(c => c.name === selectedClientName);
+                                            let newMetadata: Record<string, string> = { ...metadata, client: selectedClientName };
+
+                                            if (selectedClient?.metadata) {
+                                                customFields.forEach(field => {
+                                                    // Only autofill if the field exists in client metadata
+                                                    // This allows keeping manually entered values for non-client fields
+                                                    if (selectedClient.metadata && selectedClient.metadata[field.name]) {
+                                                        newMetadata[field.name] = String(selectedClient.metadata[field.name]);
+                                                    }
+                                                });
+                                            }
+                                            setMetadata(newMetadata);
                                         }
                                     }}
                                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
@@ -431,8 +444,8 @@ export default function UploadContractPage() {
 
             {/* Modal dodawania klienta */}
             {isClientModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <Card className="w-full max-w-md">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <Card className="w-full max-w-md bg-white dark:bg-zinc-950 border shadow-2xl">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0">
                             <CardTitle>Dodaj nowego klienta</CardTitle>
                             <Button variant="ghost" size="icon" onClick={() => setIsClientModalOpen(false)}>

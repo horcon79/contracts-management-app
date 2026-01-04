@@ -139,7 +139,7 @@ export class OCRService {
 
             return {
                 success: false,
-                error: 'Nie udało się wyodrębnić tekstu z pliku PDF (pusty lub zakodowany jako obraz)'
+                error: 'Plik PDF wygląda na skan lub obraz. Obecny system obsługuje tylko PDF z warstwą tekstową. Spróbuj skonwertować plik na format tekstowy (OCR) przed przesłaniem.'
             };
         } catch (error) {
             console.error('Błąd OCR:', error);

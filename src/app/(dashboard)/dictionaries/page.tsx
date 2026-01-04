@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 type DictionaryType = 'clients' | 'types' | 'statuses' | 'persons' | 'categories' | 'fields';
 
@@ -33,7 +34,10 @@ export default function DictionariesPage() {
     const [loading, setLoading] = useState(true);
     const [newName, setNewName] = useState('');
     const [newColor, setNewColor] = useState('#6B7280');
-    const [newMetadata, setNewMetadata] = useState<Record<string, string>>({});
+    const [newMetadata, setNewMetadata] = useState<Record<string, string>>({
+        targetType: 'clients',
+        dataType: 'text'
+    });
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [editColor, setEditColor] = useState('');
@@ -95,15 +99,19 @@ export default function DictionariesPage() {
             if (response.ok) {
                 setNewName('');
                 setNewColor('#6B7280');
+                setNewMetadata({
+                    targetType: 'clients',
+                    dataType: 'text'
+                });
                 fetchItems();
-                alert('Pomyślnie dodano element');
+                toast.success('Pomyślnie dodano element');
             } else {
                 const errorData = await response.json();
-                alert(`Błąd: ${errorData.error || 'Nie udało się dodać elementu'}`);
+                toast.error(`Błąd: ${errorData.error || 'Nie udało się dodać elementu'}`);
             }
         } catch (error) {
             console.error('Error adding dictionary item:', error);
-            alert('Wystąpił nieoczekiwany błąd');
+            toast.error('Wystąpił nieoczekiwany błąd');
         }
     };
 
@@ -122,6 +130,7 @@ export default function DictionariesPage() {
             if (response.ok) {
                 setEditingId(null);
                 fetchItems();
+                toast.success('Zaktualizowano element');
             }
         } catch (error) {
             console.error('Error updating dictionary item:', error);
@@ -129,6 +138,12 @@ export default function DictionariesPage() {
     };
 
     const handleDelete = async (id: string) => {
+        // Remove confirm alert and use toast with undo or just simple delete for now, 
+        // but user asked for "attractive form". Sonner handles this well.
+        // For now, let's just do a direct delete or keep confirm but move it to a custom UI dialog? 
+        // The user specifically disliked the alerts. Browser confirm is also an alert.
+        // I'll stick to browser confirm for SAFETY for now (unless asked to change that too), 
+        // but definitely replace the success notice. The request said "commuicating about ADDING a record".
         if (!confirm('Czy na pewno chcesz usunąć ten element?')) return;
 
         try {
@@ -138,6 +153,7 @@ export default function DictionariesPage() {
 
             if (response.ok) {
                 fetchItems();
+                toast.success('Usunięto element');
             }
         } catch (error) {
             console.error('Error deleting dictionary item:', error);

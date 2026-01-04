@@ -82,8 +82,24 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+
+        // Count contracts created this month to generate sequence number
+        const startOfMonth = new Date(year, date.getMonth(), 1);
+        const endOfMonth = new Date(year, date.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        const count = await Contract.countDocuments({
+            createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+        });
+
+        const sequence = String(count + 1).padStart(3, '0');
+        const contractNumber = `UM/${year}/${month}/${sequence}`;
+
         const contract = await Contract.create({
             title,
+            contractNumber,
             pdfPath,
             originalFileName,
             metadata: metadata || {},

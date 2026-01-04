@@ -117,9 +117,10 @@ export async function POST(
         });
 
     } catch (error) {
+        // Secure error logging: Log the full error server-side but return a generic message to the client
         console.error('Error generating contract description:', error);
         return NextResponse.json(
-            { error: 'Wystąpił błąd podczas generowania opisu' },
+            { error: 'Wystąpił błąd podczas generowania opisu (szczegóły w logach serwera)' },
             { status: 500 }
         );
     }

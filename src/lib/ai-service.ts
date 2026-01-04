@@ -69,13 +69,16 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
                 }
             ],
             temperature: 0.3,
-            max_tokens: 1000,
+            max_tokens: 2000,
         });
 
-        const content = response.choices[0]?.message?.content;
+        let content = response.choices[0]?.message?.content;
         if (!content) {
             throw new Error('Brak odpowiedzi od AI');
         }
+
+        // Clean up markdown code blocks if present to ensure valid JSON parsing
+        content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
 
         // Parse JSON response
         try {
@@ -89,9 +92,12 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
                 dates: parsedResponse.dates || {},
             };
         } catch (parseError) {
-            // If JSON parsing fails, create a basic description
+            console.warn('Failed to parse AI JSON, falling back to raw text:', parseError);
+            // If JSON parsing fails, return the full content as description without truncation
+            // We strip the braces if it looks like failed JSON to make it cleaner
+            const cleanContent = content.trim();
             return {
-                description: content.substring(0, 500) + (content.length > 500 ? '...' : ''),
+                description: cleanContent,
                 keyPoints: [],
             };
         }
