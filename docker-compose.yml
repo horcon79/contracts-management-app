@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: contracts_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: contracts_app
+    volumes:
+      # MongoDB data volume - 50GB
+      - mongodb_data:/data/db
+      # MongoDB config volume
+      - mongodb_config:/data/configdb
+      # Scripts directory for initialization
+      - ./docker/mongo-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - contracts_network
+    command: mongod --wiredTigerCacheSizeGB 2 --wiredTigerCollectionBlockCompressor snappy --wiredTigerIndexPrefixCompression true
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    container_name: contracts_app
+    restart: unless-stopped
+    # Configurable port via environment variable
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      # Database
+      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/contracts_app?authSource=admin
+      # OpenAI API
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-sk-your-openai-api-key}
+      # Auth
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-change-in-production}
+      - NEXTAUTH_URL=http://localhost:${APP_PORT:-3000}
+      # LDAP/AD (optional)
+      - LDAP_URL=${LDAP_URL:-ldap://your-domain-controller:389}
+      - LDAP_BIND_DN=${LDAP_BIND_DN:-cn=admin,dc=example,dc=com}
+      - LDAP_BIND_CREDENTIALS=${LDAP_BIND_CREDENTIALS:-your-password}
+      - LDAP_SEARCH_BASE=${LDAP_SEARCH_BASE:-dc=example,dc=com}
+      # File Storage
+      - UPLOAD_DIR=/app/uploads
+      # Application
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # File uploads persistent storage
+      - app_uploads:/app/uploads
+    networks:
+      - contracts_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis for caching (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: contracts_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - contracts_network
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  # MongoDB data volume - 50GB
+  mongodb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mongodb
+  # MongoDB config volume
+  mongodb_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mongodb_config
+  # Application uploads
+  app_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/uploads
+  # Redis data
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+
+networks:
+  contracts_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

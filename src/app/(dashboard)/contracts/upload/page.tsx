@@ -1,0 +1,368 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Upload, FileText, X } from 'lucide-react';
+
+interface DictionaryItem {
+    _id: string;
+    name: string;
+    color: string;
+}
+
+export default function UploadContractPage() {
+    const router = useRouter();
+    const [file, setFile] = useState<File | null>(null);
+    const [title, setTitle] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [dragActive, setDragActive] = useState(false);
+
+    const [clients, setClients] = useState<DictionaryItem[]>([]);
+    const [types, setTypes] = useState<DictionaryItem[]>([]);
+    const [statuses, setStatuses] = useState<DictionaryItem[]>([]);
+    const [persons, setPersons] = useState<DictionaryItem[]>([]);
+    const [categories, setCategories] = useState<DictionaryItem[]>([]);
+
+    const [metadata, setMetadata] = useState({
+        client: '',
+        contractType: '',
+        status: '',
+        responsiblePerson: '',
+        category: '',
+        value: '',
+        contractDate: '',
+        startDate: '',
+        endDate: '',
+    });
+
+    useEffect(() => {
+        fetchDictionaries();
+    }, []);
+
+    const fetchDictionaries = async () => {
+        const types = ['clients', 'types', 'statuses', 'persons', 'categories'];
+        const results = await Promise.all(
+            types.map((type) => fetch(`/api/dictionaries?type=${type}`).then((r) => r.json()))
+        );
+        setClients(results[0]);
+        setTypes(results[1]);
+        setStatuses(results[2]);
+        setPersons(results[3]);
+        setCategories(results[4]);
+    };
+
+    const handleDrag = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === 'dragenter' || e.type === 'dragover') {
+            setDragActive(true);
+        } else if (e.type === 'dragleave') {
+            setDragActive(false);
+        }
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const droppedFile = e.dataTransfer.files[0];
+            if (droppedFile.type === 'application/pdf') {
+                setFile(droppedFile);
+                if (!title) {
+                    setTitle(droppedFile.name.replace('.pdf', ''));
+                }
+            }
+        }
+    }, [title]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const selectedFile = e.target.files[0];
+            setFile(selectedFile);
+            if (!title) {
+                setTitle(selectedFile.name.replace('.pdf', ''));
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!file || !title) return;
+
+        setUploading(true);
+
+        try {
+            // Upload file
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadResponse = await fetch('/api/contracts/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error('Upload failed');
+            }
+
+            const uploadData = await uploadResponse.json();
+
+            // Create contract
+            const contractResponse = await fetch('/api/contracts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    pdfPath: uploadData.path,
+                    originalFileName: uploadData.originalName,
+                    metadata: {
+                        ...metadata,
+                        value: metadata.value ? parseFloat(metadata.value) : undefined,
+                        contractDate: metadata.contractDate || undefined,
+                        startDate: metadata.startDate || undefined,
+                        endDate: metadata.endDate || undefined,
+                    },
+                }),
+            });
+
+            if (!contractResponse.ok) {
+                throw new Error('Failed to create contract');
+            }
+
+            const contract = await contractResponse.json();
+            router.push(`/contracts/${contract._id}`);
+        } catch (error) {
+            console.error('Error creating contract:', error);
+            alert('Wystąpił błąd podczas tworzenia umowy');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6 max-w-4xl mx-auto">
+            <div>
+                <h1 className="text-3xl font-bold">Dodaj nową umowę</h1>
+                <p className="text-muted-foreground">Prześlij plik PDF i uzupełnij dane umowy</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Plik PDF</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div
+                            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+                                }`}
+                            onDragEnter={handleDrag}
+                            onDragLeave={handleDrag}
+                            onDragOver={handleDrag}
+                            onDrop={handleDrop}
+                        >
+                            {file ? (
+                                <div className="flex items-center justify-center gap-4">
+                                    <FileText className="h-8 w-8 text-primary" />
+                                    <div className="text-left">
+                                        <p className="font-medium">{file.name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setFile(null)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                                    <p className="text-muted-foreground mb-2">
+                                        Przeciągnij plik PDF lub kliknij aby wybrać
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept="application/pdf"
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                        id="file-upload"
+                                    />
+                                    <Label htmlFor="file-upload" className="cursor-pointer">
+                                        <Button type="button" variant="outline" asChild>
+                                            <span>Wybierz plik</span>
+                                        </Button>
+                                    </Label>
+                                </>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Dane umowy</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Tytuł umowy *</Label>
+                            <Input
+                                id="title"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Wprowadź tytuł umowy"
+                                required
+                            />
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="client">Klient</Label>
+                                <select
+                                    id="client"
+                                    value={metadata.client}
+                                    onChange={(e) => setMetadata({ ...metadata, client: e.target.value })}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                >
+                                    <option value="">Wybierz klienta</option>
+                                    {clients.map((c) => (
+                                        <option key={c._id} value={c.name}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="type">Typ umowy</Label>
+                                <select
+                                    id="type"
+                                    value={metadata.contractType}
+                                    onChange={(e) => setMetadata({ ...metadata, contractType: e.target.value })}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                >
+                                    <option value="">Wybierz typ</option>
+                                    {types.map((t) => (
+                                        <option key={t._id} value={t.name}>
+                                            {t.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <select
+                                    id="status"
+                                    value={metadata.status}
+                                    onChange={(e) => setMetadata({ ...metadata, status: e.target.value })}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                >
+                                    <option value="">Wybierz status</option>
+                                    {statuses.map((s) => (
+                                        <option key={s._id} value={s.name}>
+                                            {s.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="person">Osoba odpowiedzialna</Label>
+                                <select
+                                    id="person"
+                                    value={metadata.responsiblePerson}
+                                    onChange={(e) => setMetadata({ ...metadata, responsiblePerson: e.target.value })}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                >
+                                    <option value="">Wybierz osobę</option>
+                                    {persons.map((p) => (
+                                        <option key={p._id} value={p.name}>
+                                            {p.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="category">Kategoria</Label>
+                                <select
+                                    id="category"
+                                    value={metadata.category}
+                                    onChange={(e) => setMetadata({ ...metadata, category: e.target.value })}
+                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                >
+                                    <option value="">Wybierz kategorię</option>
+                                    {categories.map((c) => (
+                                        <option key={c._id} value={c.name}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="value">Wartość umowy (PLN)</Label>
+                                <Input
+                                    id="value"
+                                    type="number"
+                                    value={metadata.value}
+                                    onChange={(e) => setMetadata({ ...metadata, value: e.target.value })}
+                                    placeholder="0.00"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="contractDate">Data zawarcia</Label>
+                                <Input
+                                    id="contractDate"
+                                    type="date"
+                                    value={metadata.contractDate}
+                                    onChange={(e) => setMetadata({ ...metadata, contractDate: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="startDate">Data rozpoczęcia</Label>
+                                <Input
+                                    id="startDate"
+                                    type="date"
+                                    value={metadata.startDate}
+                                    onChange={(e) => setMetadata({ ...metadata, startDate: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="endDate">Data zakończenia</Label>
+                                <Input
+                                    id="endDate"
+                                    type="date"
+                                    value={metadata.endDate}
+                                    onChange={(e) => setMetadata({ ...metadata, endDate: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="flex gap-4">
+                    <Button type="button" variant="outline" onClick={() => router.back()}>
+                        Anuluj
+                    </Button>
+                    <Button type="submit" disabled={!file || !title || uploading}>
+                        {uploading ? 'Przesyłanie...' : 'Zapisz umowę'}
+                    </Button>
+                </div>
+            </form>
+        </div>
+    );
+}
