@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ArrowLeft, Trash2, Send, Bot, MessageCircle, Sparkles, Loader2 } from 'lucide-react';
+import { FileText, ArrowLeft, Trash2, Send, Bot, MessageCircle, Sparkles, Loader2, Pencil, X, Check, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { OCRPanel } from '@/components/ocr-panel';
@@ -24,6 +25,7 @@ interface Contract {
         contractDate?: string;
         startDate?: string;
         endDate?: string;
+        company?: string;
         client?: string;
         contractType?: string;
         status?: string;
@@ -57,17 +59,51 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
     const [description, setDescription] = useState('');
     const [generatingDescription, setGeneratingDescription] = useState(false);
     const [savingDescription, setSavingDescription] = useState(false);
+    const [clientDetails, setClientDetails] = useState<any>(null);
+
+    // Edit Mode State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editMetadata, setEditMetadata] = useState<Record<string, any>>({});
+    const [dictionaries, setDictionaries] = useState<{
+        clients: any[];
+        types: any[];
+        statuses: any[];
+        persons: any[];
+        categories: any[];
+        companies: any[];
+        customFields: any[];
+    }>({
+        clients: [],
+        types: [],
+        statuses: [],
+        persons: [],
+        categories: [],
+        companies: [],
+        customFields: []
+    });
 
     useEffect(() => {
         fetchContract();
         fetchNotes();
+        fetchDictionaries();
     }, [id]);
 
     useEffect(() => {
         if (contract) {
             setDescription(contract.description || '');
+            if (contract.metadata.client) {
+                fetchClientDetails(contract.metadata.client);
+            }
         }
     }, [contract]);
+
+    useEffect(() => {
+        if (isEditing && contract) {
+            setEditMetadata({
+                ...contract.metadata
+            });
+        }
+    }, [isEditing, contract]);
 
     const fetchContract = async () => {
         try {
@@ -92,6 +128,68 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
             }
         } catch (error) {
             console.error('Error fetching notes:', error);
+        }
+    };
+
+    const fetchDictionaries = async () => {
+        try {
+            const types = ['clients', 'types', 'statuses', 'persons', 'categories', 'fields', 'companies'];
+            const results = await Promise.all(
+                types.map(type => fetch(`/api/dictionaries?type=${type}`).then(res => res.json()))
+            );
+
+            setDictionaries({
+                clients: results[0],
+                types: results[1],
+                statuses: results[2],
+                persons: results[3],
+                categories: results[4],
+                customFields: results[5],
+                companies: results[6]
+            });
+        } catch (error) {
+            console.error('Error fetching dictionaries:', error);
+        }
+    };
+
+    const handleSaveMetadata = async () => {
+        if (!contract) return;
+
+        try {
+            const response = await fetch(`/api/contracts/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    metadata: editMetadata
+                }),
+            });
+
+            if (response.ok) {
+                const updated = await response.json();
+                setContract(updated);
+                setIsEditing(false);
+                toast.success('Dane umowy zostały zaktualizowane');
+            } else {
+                toast.error('Nie udało się zapisać zmian');
+            }
+        } catch (error) {
+            console.error('Error updating contract:', error);
+            toast.error('Wystąpił błąd');
+        }
+    };
+
+    const fetchClientDetails = async (clientName: string) => {
+        try {
+            const response = await fetch(`/api/dictionaries?type=clients`);
+            if (response.ok) {
+                const clients = await response.json();
+                const client = clients.find((c: any) => c.name === clientName);
+                if (client) {
+                    setClientDetails(client);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching client details:', error);
         }
     };
 
@@ -231,10 +329,25 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Przeglądarka PDF
-                            </CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5" />
+                                    Przeglądarka PDF
+                                </CardTitle>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const url = contract.pdfPath.startsWith('/api')
+                                            ? `${contract.pdfPath}?download=true`
+                                            : `/api/contracts/view/${contract.pdfPath}?download=true`;
+                                        window.open(url, '_blank');
+                                    }}
+                                >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Pobierz
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="h-[600px]">
@@ -318,6 +431,275 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                         />
                     )}
 
+                </div>
+
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <CardTitle>Szczegóły umowy</CardTitle>
+                                {canEdit && (
+                                    isEditing ? (
+                                        <div className="flex gap-2">
+                                            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={handleSaveMetadata}>
+                                                <Check className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                    )
+                                )}
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {isEditing ? (
+                                <div className="grid gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Typ umowy</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.contractType || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, contractType: e.target.value })}
+                                        >
+                                            <option value="">Wybierz typ</option>
+                                            {dictionaries.types.map((t) => (
+                                                <option key={t._id} value={t.name}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Nasza Firma</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.company || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, company: e.target.value })}
+                                        >
+                                            <option value="">Wybierz firmę</option>
+                                            {dictionaries.companies.map((c) => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Klient</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.client || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, client: e.target.value })}
+                                        >
+                                            <option value="">Wybierz klienta</option>
+                                            {dictionaries.clients.map((c) => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Status</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.status || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, status: e.target.value })}
+                                        >
+                                            <option value="">Wybierz status</option>
+                                            {dictionaries.statuses.map((s) => (
+                                                <option key={s._id} value={s.name}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Osoba odpowiedzialna</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.responsiblePerson || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, responsiblePerson: e.target.value })}
+                                        >
+                                            <option value="">Wybierz osobę</option>
+                                            {dictionaries.persons.map((p) => (
+                                                <option key={p._id} value={p.name}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Kategoria</Label>
+                                        <select
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                            value={editMetadata.category || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, category: e.target.value })}
+                                        >
+                                            <option value="">Wybierz kategorię</option>
+                                            {dictionaries.categories.map((c) => (
+                                                <option key={c._id} value={c.name}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Wartość</Label>
+                                        <Input
+                                            type="number"
+                                            value={editMetadata.value || ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, value: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Data zawarcia</Label>
+                                        <Input
+                                            type="date"
+                                            value={editMetadata.contractDate ? new Date(editMetadata.contractDate).toISOString().split('T')[0] : ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, contractDate: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Data rozpoczęcia</Label>
+                                        <Input
+                                            type="date"
+                                            value={editMetadata.startDate ? new Date(editMetadata.startDate).toISOString().split('T')[0] : ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, startDate: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Data zakończenia</Label>
+                                        <Input
+                                            type="date"
+                                            value={editMetadata.endDate ? new Date(editMetadata.endDate).toISOString().split('T')[0] : ''}
+                                            onChange={(e) => setEditMetadata({ ...editMetadata, endDate: e.target.value })}
+                                        />
+                                    </div>
+
+                                    {dictionaries.customFields
+                                        .filter(f => !f.metadata?.targetType || f.metadata?.targetType === 'clients')
+                                        .map((field) => (
+                                            <div key={field._id} className="space-y-2">
+                                                <Label>{field.name}</Label>
+                                                <Input
+                                                    value={editMetadata[field.name] || ''}
+                                                    onChange={(e) => setEditMetadata({ ...editMetadata, [field.name]: e.target.value })}
+                                                />
+                                            </div>
+                                        ))}
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {contract.metadata.company && (
+                                            <div className="col-span-2 p-3 rounded-lg bg-zinc-50 border border-zinc-200 dark:bg-zinc-900/50 dark:border-zinc-800">
+                                                <Label className="text-muted-foreground mb-1 block">Nasza Firma</Label>
+                                                <p className="text-lg font-bold">{contract.metadata.company}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.client && (
+                                            <div className="col-span-2 p-3 rounded-lg bg-blue-50/50 border border-blue-100">
+                                                <Label className="text-blue-800 font-semibold mb-1 block">Klient</Label>
+                                                <p className="text-lg font-bold text-blue-900">{contract.metadata.client}</p>
+                                                {clientDetails?.metadata && Object.keys(clientDetails.metadata).length > 0 && (
+                                                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-blue-800/80">
+                                                        {Object.entries(clientDetails.metadata).map(([key, value]) => {
+                                                            if (!value) return null;
+                                                            return (
+                                                                <div key={key} className="sm:col-span-2">
+                                                                    <span className="font-medium capitalize">{key}:</span> {value as string}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {contract.metadata.contractType && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Typ umowy</Label>
+                                                <p className="font-medium">{contract.metadata.contractType}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.status && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Status</Label>
+                                                <p className="font-medium">{contract.metadata.status}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.category && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Kategoria</Label>
+                                                <p className="font-medium">{contract.metadata.category}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.value && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Wartość</Label>
+                                                <p className="font-medium">{formatCurrency(contract.metadata.value)}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.responsiblePerson && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Osoba odpowiedzialna</Label>
+                                                <p className="font-medium">{contract.metadata.responsiblePerson}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.contractDate && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Data zawarcia</Label>
+                                                <p className="font-medium">{formatDate(contract.metadata.contractDate)}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.startDate && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Data rozpoczęcia</Label>
+                                                <p className="font-medium">{formatDate(contract.metadata.startDate)}</p>
+                                            </div>
+                                        )}
+                                        {contract.metadata.endDate && (
+                                            <div>
+                                                <Label className="text-muted-foreground">Data zakończenia</Label>
+                                                <p className="font-medium">{formatDate(contract.metadata.endDate)}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Dynamiczne pola dodatkowe */}
+                                        {Object.entries(contract.metadata).map(([key, value]) => {
+                                            // Pomiń pola już obsłużone powyżej
+                                            const hardcodedFields = ['company', 'client', 'contractType', 'status', 'category', 'value', 'responsiblePerson', 'contractDate', 'startDate', 'endDate'];
+                                            if (hardcodedFields.includes(key) || !value) return null;
+
+                                            return (
+                                                <div key={key}>
+                                                    <Label className="text-muted-foreground">{key}</Label>
+                                                    <p className="font-medium">{value as string}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="pt-4 border-t">
+                                        <div className="grid gap-4 sm:grid-cols-2 text-sm">
+                                            <div>
+                                                <Label className="text-muted-foreground">Dodano</Label>
+                                                <p>{formatDate(contract.createdAt)}</p>
+                                            </div>
+                                            {contract.createdBy && (
+                                                <div>
+                                                    <Label className="text-muted-foreground">Przez</Label>
+                                                    <p>{contract.createdBy.name}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     {contract.aiSummary && (
                         <Card>
                             <CardHeader>
@@ -331,86 +713,6 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
                             </CardContent>
                         </Card>
                     )}
-                </div>
-
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Szczegóły umowy</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {contract.metadata.client && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Klient</Label>
-                                        <p className="font-medium">{contract.metadata.client}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.contractType && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Typ umowy</Label>
-                                        <p className="font-medium">{contract.metadata.contractType}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.status && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Status</Label>
-                                        <p className="font-medium">{contract.metadata.status}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.category && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Kategoria</Label>
-                                        <p className="font-medium">{contract.metadata.category}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.value && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Wartość</Label>
-                                        <p className="font-medium">{formatCurrency(contract.metadata.value)}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.responsiblePerson && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Osoba odpowiedzialna</Label>
-                                        <p className="font-medium">{contract.metadata.responsiblePerson}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.contractDate && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Data zawarcia</Label>
-                                        <p className="font-medium">{formatDate(contract.metadata.contractDate)}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.startDate && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Data rozpoczęcia</Label>
-                                        <p className="font-medium">{formatDate(contract.metadata.startDate)}</p>
-                                    </div>
-                                )}
-                                {contract.metadata.endDate && (
-                                    <div>
-                                        <Label className="text-muted-foreground">Data zakończenia</Label>
-                                        <p className="font-medium">{formatDate(contract.metadata.endDate)}</p>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="pt-4 border-t">
-                                <div className="grid gap-4 sm:grid-cols-2 text-sm">
-                                    <div>
-                                        <Label className="text-muted-foreground">Dodano</Label>
-                                        <p>{formatDate(contract.createdAt)}</p>
-                                    </div>
-                                    {contract.createdBy && (
-                                        <div>
-                                            <Label className="text-muted-foreground">Przez</Label>
-                                            <p>{contract.createdBy.name}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
 
                     <Card>
                         <CardHeader>

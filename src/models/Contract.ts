@@ -23,6 +23,7 @@ export interface IContractMetadata {
 
 export interface IContract extends Document {
     _id: mongoose.Types.ObjectId;
+    contractNumber?: string;
     title: string;
     pdfPath: string;
     originalFileName: string;
@@ -46,6 +47,12 @@ const ContractSchema = new Schema<IContract>(
             type: String,
             required: true,
             trim: true,
+        },
+        contractNumber: {
+            type: String,
+            unique: true,
+            required: false,
+            sparse: true,
         },
         pdfPath: {
             type: String,
@@ -121,7 +128,7 @@ const ContractSchema = new Schema<IContract>(
     }
 );
 
-ContractSchema.index({ title: 'text', ocrText: 'text', description: 'text' });
+ContractSchema.index({ title: 'text', ocrText: 'text', description: 'text', aiSummary: 'text' });
 ContractSchema.index({ 'metadata.client': 1 });
 ContractSchema.index({ 'metadata.contractType': 1 });
 ContractSchema.index({ 'metadata.status': 1 });

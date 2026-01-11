@@ -8,7 +8,7 @@ import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 
 // Configure pdf.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFViewerProps {
     file: string;
@@ -19,11 +19,18 @@ export function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
     const [numPages, setNumPages] = useState<number>(0);
     const [pageNumber, setPageNumber] = useState<number>(1);
     const [scale, setScale] = useState<number>(1.0);
+    const [error, setError] = useState<string | null>(null);
 
     function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
         setNumPages(numPages);
         setPageNumber(1);
+        setError(null);
         onLoadSuccess?.(numPages);
+    }
+
+    function onDocumentLoadError(err: Error) {
+        console.error("PDF Load Error:", err);
+        setError(`Nie udało się załadować pliku PDF: ${err.message}`);
     }
 
     function goToPrevPage() {
@@ -92,22 +99,33 @@ export function PDFViewer({ file, onLoadSuccess }: PDFViewerProps) {
             </div>
 
             {/* PDF Content */}
-            <div className="flex-1 overflow-auto p-4">
-                <div className="flex justify-center">
-                    <Document
-                        file={file}
-                        onLoadSuccess={onDocumentLoadSuccess}
-                        className="max-w-full"
-                    >
-                        <Page
-                            pageNumber={pageNumber}
-                            scale={scale}
-                            className="shadow-lg"
-                            renderTextLayer={false}
-                            renderAnnotationLayer={false}
-                        />
-                    </Document>
-                </div>
+            <div className="flex-1 overflow-auto p-4 flex justify-center items-start">
+                {error ? (
+                    <div className="flex flex-col items-center justify-center text-red-500 bg-red-50 p-8 rounded-lg border border-red-200 mt-10">
+                        <p className="font-semibold mb-2">{error}</p>
+                        <Button variant="outline" onClick={() => window.location.reload()}>
+                            Spróbuj ponownie
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="flex justify-center">
+                        <Document
+                            file={file}
+                            onLoadSuccess={onDocumentLoadSuccess}
+                            onLoadError={onDocumentLoadError}
+                            className="max-w-full"
+                            loading={<p className="text-muted-foreground italic mt-10">Ładowanie dokumentu...</p>}
+                        >
+                            <Page
+                                pageNumber={pageNumber}
+                                scale={scale}
+                                className="shadow-lg"
+                                renderTextLayer={true}
+                                renderAnnotationLayer={false}
+                            />
+                        </Document>
+                    </div>
+                )}
             </div>
         </div>
     );

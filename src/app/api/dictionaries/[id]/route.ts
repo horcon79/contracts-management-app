@@ -21,11 +21,11 @@ export async function PUT(
 
         const { id } = await params;
         const body = await request.json();
-        const { name, color, isActive, order } = body;
+        const { name, color, isActive, order, metadata } = body;
 
         const dictionary = await Dictionary.findByIdAndUpdate(
             id,
-            { name, color, isActive, order },
+            { name, color, isActive, order, metadata },
             { new: true, runValidators: true }
         );
 

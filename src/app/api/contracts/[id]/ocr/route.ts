@@ -19,16 +19,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const { id } = await params;
         const body = await request.json();
-        const { apiKey, model, action } = body;
+        let { action } = body;
+
+        // Fetch settings
+        const settingsObj = await OCRService.getSettings();
+        let apiKey = settingsObj.openai_api_key;
+        let model = settingsObj.default_model || 'gpt-4o';
 
         if (!apiKey) {
-            return NextResponse.json({ error: 'Klucz API jest wymagany' }, { status: 400 });
+            return NextResponse.json({
+                error: 'Klucz API OpenAI nie jest skonfigurowany w ustawieniach systemu.',
+                errorType: 'API_KEY_MISSING'
+            }, { status: 400 });
         }
 
         // Sprawdź czy kontrakt istnieje
         const contract = await Contract.findById(id);
         if (!contract) {
-            return NextResponse.json({ error: 'Kontrakt nie został znaleziony' }, { status: 404 });
+            return NextResponse.json({
+                error: 'Kontrakt nie został znaleziony',
+                errorType: 'CONTRACT_NOT_FOUND'
+            }, { status: 404 });
         }
 
         const ocrService = new OCRService(apiKey);
@@ -37,7 +48,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const modelAvailable = await ocrService.checkModelAvailability(model, apiKey);
         if (!modelAvailable) {
             return NextResponse.json({
-                error: `Model ${model} nie jest dostępny dla tego klucza API`
+                error: `Model ${model} nie jest dostępny dla Twojego klucza API. Sprawdź konfigurację w Admin > Ustawienia.`,
+                errorType: 'MODEL_NOT_AVAILABLE'
             }, { status: 400 });
         }
 
@@ -87,15 +99,40 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         return NextResponse.json({
             success: result.success,
-            data: result,
-            maskedApiKey: OCRService.maskApiKey(apiKey)
+            data: result
         });
 
     } catch (error) {
         console.error('Błąd OCR API:', error);
 
+        let errorMessage = 'Wystąpił nieoczekiwany błąd';
+        let errorType = 'UNKNOWN_ERROR';
+        const rawError = error instanceof Error ? error.message : String(error);
+
+        // Mask API key in any raw error message
+        const sanitizedError = rawError.replace(/sk-[a-zA-Z0-9]{32,}/g, '***API-KEY***');
+
+        if (rawError.includes('EACCES')) {
+            errorMessage = 'Błąd uprawnień serwera (EACCES). Nie można zapisać plików tymczasowych.';
+            errorType = 'SERVER_PERMISSION_ERROR';
+        } else if (rawError.includes('ENOENT')) {
+            errorMessage = 'Błąd plików tymczasowych (ENOENT). Katalog nie istnieje.';
+            errorType = 'FILE_SYSTEM_ERROR';
+        } else if (rawError.includes('401') || rawError.includes('Invalid API key')) {
+            errorMessage = 'Nieprawidłowy klucz API OpenAI (401). Sprawdź konfigurację.';
+            errorType = 'AUTH_ERROR';
+        } else if (rawError.includes('429')) {
+            errorMessage = 'Przekroczono limit zapytań OpenAI (429).';
+            errorType = 'RATE_LIMIT_ERROR';
+        } else {
+            // General fallback, masking potential secrets
+            errorMessage = `Błąd przetwarzania: ${sanitizedError}`;
+        }
+
         return NextResponse.json({
-            error: error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd'
+            error: errorMessage,
+            errorType: errorType,
+            details: process.env.NODE_ENV === 'development' ? sanitizedError : undefined
         }, { status: 500 });
     }
 }
@@ -139,8 +176,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     } catch (error) {
         console.error('Błąd pobierania statusu OCR:', error);
 
+        // Sanitize error message
+        const errorMessage = error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd';
+        const sanitizedMessage = errorMessage.includes('sk-')
+            ? 'Błąd serwera (szczegóły w logach)'
+            : errorMessage;
+
         return NextResponse.json({
-            error: error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd'
+            error: sanitizedMessage
         }, { status: 500 });
     }
 }

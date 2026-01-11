@@ -11,17 +11,57 @@ export interface ContractDescription {
     client?: string;
     value?: number;
     dates?: {
-        contractDate?: Date;
-        startDate?: Date;
-        endDate?: Date;
+        contractDate?: Date | string;
+        startDate?: Date | string;
+        endDate?: Date | string;
     };
+}
+
+/**
+ * Robustly parses a date string from AI, supporting common formats like DD.MM.YYYY, DD-MM-YYYY, YYYY-MM-DD
+ */
+function parseAIDate(dateStr: any): Date | undefined {
+    if (!dateStr || typeof dateStr !== 'string') return undefined;
+
+    // Clean string
+    const cleanStr = dateStr.trim();
+    if (!cleanStr) return undefined;
+
+    // Try standard JS parsing (works for ISO YYYY-MM-DD)
+    const date = new Date(cleanStr);
+    if (!isNaN(date.getTime())) return date;
+
+    // Try DD.MM.YYYY (Common in Poland)
+    const dotMatch = cleanStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (dotMatch) {
+        const day = parseInt(dotMatch[1], 10);
+        const month = parseInt(dotMatch[2], 10) - 1;
+        const year = parseInt(dotMatch[3], 10);
+        const res = new Date(year, month, day);
+        if (!isNaN(res.getTime())) return res;
+    }
+
+    // Try DD-MM-YYYY
+    const dashMatch = cleanStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+    if (dashMatch) {
+        const day = parseInt(dashMatch[1], 10);
+        const month = parseInt(dashMatch[2], 10) - 1;
+        const year = parseInt(dashMatch[3], 10);
+        const res = new Date(year, month, day);
+        if (!isNaN(res.getTime())) return res;
+    }
+
+    return undefined;
 }
 
 export async function generateContractDescription(
     contractText: string,
-    originalFileName: string
+    originalFileName: string,
+    options?: { apiKey?: string; model?: string }
 ): Promise<ContractDescription> {
     try {
+        const client = options?.apiKey ? new OpenAI({ apiKey: options.apiKey }) : openai;
+        const model = options?.model || "gpt-4o-mini";
         const prompt = `
 Przeanalizuj poniższy tekst umowy i wygeneruj szczegółowy opis w języku polskim. 
 Uwzględnij następujące elementy:
@@ -46,15 +86,15 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
   "client": "nazwa klienta (opcjonalnie)",
   "value": "wartość umowy (opcjonalnie)",
   "dates": {
-    "contractDate": "data zawarcia (opcjonalnie)",
-    "startDate": "data rozpoczęcia (opcjonalnie)",
-    "endDate": "data zakończenia (opcjonalnie)"
+    "contractDate": "data zawarcia (format ISO YYYY-MM-DD, opcjonalnie)",
+    "startDate": "data rozpoczęcia (format ISO YYYY-MM-DD, opcjonalnie)",
+    "endDate": "data zakończenia (format ISO YYYY-MM-DD, opcjonalnie)"
   }
 }
 `;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+        const response = await client.chat.completions.create({
+            model: model,
             messages: [
                 {
                     role: "system",
@@ -66,13 +106,16 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
                 }
             ],
             temperature: 0.3,
-            max_tokens: 1000,
+            max_tokens: 2000,
         });
 
-        const content = response.choices[0]?.message?.content;
+        let content = response.choices[0]?.message?.content;
         if (!content) {
             throw new Error('Brak odpowiedzi od AI');
         }
+
+        // Clean up markdown code blocks if present to ensure valid JSON parsing
+        content = content.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
 
         // Parse JSON response
         try {
@@ -83,30 +126,24 @@ Odpowiedź podaj w formacie JSON z następującymi polami:
                 contractType: parsedResponse.contractType,
                 client: parsedResponse.client,
                 value: parsedResponse.value ? parseFloat(parsedResponse.value) : undefined,
-                dates: parsedResponse.dates || {},
+                dates: {
+                    contractDate: parseAIDate(parsedResponse.dates?.contractDate),
+                    startDate: parseAIDate(parsedResponse.dates?.startDate),
+                    endDate: parseAIDate(parsedResponse.dates?.endDate),
+                },
             };
         } catch (parseError) {
-            // If JSON parsing fails, create a basic description
+            console.warn('Failed to parse AI JSON, falling back to raw text:', parseError);
+            // If JSON parsing fails, return the full content as description without truncation
+            // We strip the braces if it looks like failed JSON to make it cleaner
+            const cleanContent = content.trim();
             return {
-                description: content.substring(0, 500) + (content.length > 500 ? '...' : ''),
+                description: cleanContent,
                 keyPoints: [],
             };
         }
     } catch (error) {
         console.error('Error generating contract description:', error);
         throw new Error('Nie udało się wygenerować opisu umowy');
-    }
-}
-
-export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
-    // This would typically use a PDF parsing library like pdf-parse
-    // For now, we'll return a placeholder
-    try {
-        const pdfParse = require('pdf-parse');
-        const data = await pdfParse(pdfBuffer);
-        return data.text;
-    } catch (error) {
-        console.error('Error extracting text from PDF:', error);
-        throw new Error('Nie udało się wyodrębnić tekstu z PDF');
     }
 }

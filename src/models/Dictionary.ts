@@ -1,12 +1,13 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export type DictionaryType = 'clients' | 'types' | 'statuses' | 'persons' | 'categories';
+export type DictionaryType = 'clients' | 'types' | 'statuses' | 'persons' | 'categories' | 'fields' | 'companies';
 
 export interface IDictionary extends Document {
     _id: mongoose.Types.ObjectId;
     type: DictionaryType;
     name: string;
     color?: string;
+    metadata?: Record<string, string>;
     isActive: boolean;
     order: number;
     createdAt: Date;
@@ -17,7 +18,7 @@ const DictionarySchema = new Schema<IDictionary>(
     {
         type: {
             type: String,
-            enum: ['clients', 'types', 'statuses', 'persons', 'categories'],
+            enum: ['clients', 'types', 'statuses', 'persons', 'categories', 'fields', 'companies'],
             required: true,
         },
         name: {
@@ -33,9 +34,10 @@ const DictionarySchema = new Schema<IDictionary>(
             type: Boolean,
             default: true,
         },
-        order: {
-            type: Number,
-            default: 0,
+        metadata: {
+            type: Map,
+            of: Schema.Types.Mixed,
+            default: {},
         },
     },
     {

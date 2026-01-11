@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
             success: true,
             filename,
             originalName: file.name,
-            path: `/uploads/${filename}`,
+            path: `/api/contracts/view/${filename}`,
             size: file.size,
         });
     } catch (error) {
