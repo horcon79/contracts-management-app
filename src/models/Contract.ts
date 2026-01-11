@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface IAssignmentHistoryEntry {
+    previousAssigneeId: mongoose.Types.ObjectId;
+    changedBy: mongoose.Types.ObjectId;
+    changedAt: Date;
+    reason?: string;
+}
+
 export interface IContractMetadata {
     contractDate?: Date;
     startDate?: Date;
@@ -10,6 +17,8 @@ export interface IContractMetadata {
     value?: number;
     responsiblePerson?: string;
     category?: string;
+    previousAssigneeId?: string;
+    assignmentHistory?: IAssignmentHistoryEntry[];
 }
 
 export interface IContract extends Document {
@@ -25,6 +34,10 @@ export interface IContract extends Document {
     createdBy: mongoose.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
+    teamId?: mongoose.Types.ObjectId;
+    assigneeId?: mongoose.Types.ObjectId;
+    signatureDeadline?: Date;
+    signatureStatus?: string;
 }
 
 const ContractSchema = new Schema<IContract>(
@@ -71,6 +84,37 @@ const ContractSchema = new Schema<IContract>(
             ref: 'User',
             required: true,
         },
+        teamId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Team',
+        },
+        assigneeId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        signatureDeadline: {
+            type: Date,
+        },
+        signatureStatus: {
+            type: String,
+        },
+        'metadata.assignmentHistory': {
+            type: [{
+                previousAssigneeId: {
+                    type: Schema.Types.ObjectId,
+                    ref: 'User',
+                },
+                changedBy: {
+                    type: Schema.Types.ObjectId,
+                    ref: 'User',
+                },
+                changedAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+                reason: String,
+            }],
+        },
     },
     {
         timestamps: true,
@@ -82,6 +126,9 @@ ContractSchema.index({ 'metadata.client': 1 });
 ContractSchema.index({ 'metadata.contractType': 1 });
 ContractSchema.index({ 'metadata.status': 1 });
 ContractSchema.index({ createdAt: -1 });
+ContractSchema.index({ teamId: 1 });
+ContractSchema.index({ assigneeId: 1 });
+ContractSchema.index({ 'metadata.assignmentHistory.changedAt': -1 });
 
 const Contract: Model<IContract> = mongoose.models.Contract || mongoose.model<IContract>('Contract', ContractSchema);
 
