@@ -10,6 +10,11 @@ export interface IUser extends Document {
     role: UserRole;
     adUsername?: string;
     isActive: boolean;
+    // Azure AD fields
+    azureAdId?: string;
+    azureAdToken?: string;
+    azureAdRefreshToken?: string;
+    lastAzureSync?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -46,11 +51,31 @@ const UserSchema = new Schema<IUser>(
             type: Boolean,
             default: true,
         },
+        // Azure AD fields
+        azureAdId: {
+            type: String,
+            sparse: true,
+            index: true,
+        },
+        azureAdToken: {
+            type: String,
+            select: false,
+        },
+        azureAdRefreshToken: {
+            type: String,
+            select: false,
+        },
+        lastAzureSync: {
+            type: Date,
+        },
     },
     {
         timestamps: true,
     }
 );
+
+UserSchema.index({ azureAdId: 1 });
+UserSchema.index({ lastAzureSync: 1 });
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 

@@ -49,11 +49,19 @@ services:
       # Auth
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-change-in-production}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      # LDAP/AD (optional)
-      - LDAP_URL=${LDAP_URL:-ldap://your-domain-controller:389}
-      - LDAP_BIND_DN=${LDAP_BIND_DN:-cn=admin,dc=example,dc=com}
-      - LDAP_BIND_CREDENTIALS=${LDAP_BIND_CREDENTIALS:-your-password}
-      - LDAP_SEARCH_BASE=${LDAP_SEARCH_BASE:-dc=example,dc=com}
+      # Azure AD SSO (nowe)
+      - AZURE_AD_CLIENT_ID=${AZURE_AD_CLIENT_ID}
+      - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET}
+      - AZURE_AD_TENANT_ID=${AZURE_AD_TENANT_ID:-common}
+      # LDAP/AD (deprecated - użyj Azure AD)
+      - LDAP_URL=${LDAP_URL:-}
+      - LDAP_BIND_DN=${LDAP_BIND_DN:-}
+      - LDAP_BIND_CREDENTIALS=${LDAP_BIND_CREDENTIALS:-}
+      - LDAP_SEARCH_BASE=${LDAP_SEARCH_BASE:-}
+      # Signature Verification (nowe)
+      - OCSP_RESPONDER_URL=${OCSP_RESPONDER_URL:-}
+      - TSA_URL=${TSA_URL:-}
+      - TRUSTED_CA=${TRUSTED_CA:-}
       # File Storage
       - UPLOAD_DIR=/app/uploads
       # Application

@@ -1,7 +1,7 @@
 # Dokumentacja Systemu Zarządzania Umowami
 
-**Wersja dokumentacji:** 1.0.0  
-**Wersja aplikacji:** 1.4.0  
+**Wersja dokumentacji:** 1.1.0  
+**Wersja aplikacji:** 1.5.0  
 **Data aktualizacji:** Styczeń 2026
 
 ---
@@ -685,6 +685,13 @@ Tylko podgląd bez możliwości modyfikacji:
 
 System wykorzystuje NextAuth.js v5 z zabezpieczeniami:
 
+**Metody uwierzytelniania:**
+
+- **Lokalne konto użytkownika** - email i hasło z szyfrowaniem bcrypt
+- **Azure Active Directory (SSO)** - logowanie przez Microsoft Azure AD
+
+**Zabezpieczenia:**
+
 - **Szyfrowanie haseł:** bcryptjs z salt rounds
 - **Sesje:** JWT z secret key
 - **CSRF Protection:** Wbudowana ochrona Next.js
@@ -704,7 +711,48 @@ System wykorzystuje NextAuth.js v5 z zabezpieczeniami:
 - **Bezpieczne nazewnictwo:** Unikalne nazwy plików (UUID)
 - **Izolacja plików:** Pliki dostępne tylko przez API z walidacją
 
-### 8.4 Rekomendacje dla Produkcji
+### 8.4 Azure AD SSO
+
+Szczegółowa instrukcja konfiguracji Single Sign-On z Azure Active Directory:
+
+#### Krok 1: Rejestracja aplikacji w Azure AD
+
+1. Przejdź do [Azure Portal](https://portal.azure.com) → Azure Active Directory → Rejestracje aplikacji
+2. Kliknij **+ Nowa rejestracja**
+3. Wypełnij:
+   - **Nazwa:** `Zarządzanie Umowami`
+   - **Obsługiwane typy kont:** Konta w tym katalogu organizacyjnym tylko
+   - **Redirect URI:** `https://twoja-domena.com/api/auth/callback/azure-ad`
+4. Kliknij **Zarejestruj**
+
+#### Krok 2: Konfiguracja aplikacji Azure AD
+
+Po rejestracji zanotuj:
+
+- **Application (client) ID** - np. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+- **Directory (tenant) ID** - np. `yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy`
+
+Utwórz klient secret:
+
+1. Certyfikaty i klucze tajne → + Nowy klucz tajny klienta
+2. Zapisz wartość (dostępna tylko raz)
+
+Dodaj uprawnienia API:
+
+1. Uprawnienia interfejsu API → + Dodaj uprawnienie
+2. Microsoft Graph → Delegowane uprawnienia
+3. Dodaj: `openid`, `profile`, `email`, `User.Read`, `offline_access`
+
+#### Krok 3: Konfiguracja zmiennych środowiskowych
+
+```env
+# Azure AD SSO (wymagane dla logowania przez Microsoft)
+AZURE_AD_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+AZURE_AD_CLIENT_SECRET=twoj-klucz-tajny
+AZURE_AD_TENANT_ID=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+```
+
+### 8.5 Rekomendacje dla Produkcji
 
 1. **HTTPS:** Wymuszenie połączenia szyfrowanego
 2. **Silne hasła:** Polityka haseł (min. 12 znaków, znaki specjalne)
@@ -713,6 +761,7 @@ System wykorzystuje NextAuth.js v5 z zabezpieczeniami:
 5. **Backup:** Regularne kopie zapasowe MongoDB
 6. **Redis:** Zabezpieczenie hasłem
 7. **SMTPS:** Użycie szyfrowanego połączenia SMTP (port 465 lub STARTTLS)
+8. **Azure AD:** Regularna rotacja kluczy tajnych, monitorowanie logowań
 
 ---
 

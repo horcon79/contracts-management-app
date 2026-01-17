@@ -17,6 +17,10 @@ export interface ITeam extends Document {
     members: ITeamMember[];
     allowedContractTypes: string[];
     isActive: boolean;
+    // Azure AD fields
+    azureAdGroupId?: string;
+    autoAssignEnabled: boolean;
+    defaultRole: TeamRole;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -70,6 +74,21 @@ const TeamSchema = new Schema<ITeam>(
             type: Boolean,
             default: true,
         },
+        // Azure AD fields
+        azureAdGroupId: {
+            type: String,
+            sparse: true,
+            index: true,
+        },
+        autoAssignEnabled: {
+            type: Boolean,
+            default: false,
+        },
+        defaultRole: {
+            type: String,
+            enum: ['admin', 'member', 'viewer'],
+            default: 'member',
+        },
     },
     {
         timestamps: true,
@@ -80,6 +99,7 @@ TeamSchema.index({ ownerId: 1 });
 TeamSchema.index({ 'members.userId': 1 });
 TeamSchema.index({ isActive: 1 });
 TeamSchema.index({ name: 'text' });
+TeamSchema.index({ azureAdGroupId: 1 });
 
 const Team: Model<ITeam> = mongoose.models.Team || mongoose.model<ITeam>('Team', TeamSchema);
 

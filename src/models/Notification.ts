@@ -8,10 +8,14 @@ export type NotificationType =
     | 'comment_mention'
     | 'assignment_received'
     | 'assignment_changed'
+    | 'assignment_to_team'
     | 'status_changed'
     | 'contract_shared'
     | 'team_invitation'
-    | 'due_date_reminder';
+    | 'due_date_reminder'
+    | 'signature_required'
+    | 'signature_completed'
+    | 'signature_expired';
 
 /**
  * Typy encji, do których odnosi się powiadomienie
@@ -33,6 +37,7 @@ export interface INotification extends Document {
     readAt?: Date;
     isEmailSent: boolean;
     emailSentAt?: Date;
+    emailError?: string;
     metadata?: Record<string, unknown>;
     createdAt: Date;
     updatedAt: Date;
@@ -53,10 +58,14 @@ const NotificationSchema = new Schema<INotification>(
                 'comment_mention',
                 'assignment_received',
                 'assignment_changed',
+                'assignment_to_team',
                 'status_changed',
                 'contract_shared',
                 'team_invitation',
                 'due_date_reminder',
+                'signature_required',
+                'signature_completed',
+                'signature_expired',
             ] as NotificationType[],
             required: true,
         },
@@ -95,6 +104,9 @@ const NotificationSchema = new Schema<INotification>(
         },
         emailSentAt: {
             type: Date,
+        },
+        emailError: {
+            type: String,
         },
         metadata: {
             type: Schema.Types.Mixed,
