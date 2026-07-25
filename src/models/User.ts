@@ -4,13 +4,14 @@ export type UserRole = 'read' | 'edit' | 'admin';
 
 export interface IUser extends Document {
     _id: mongoose.Types.ObjectId;
+    tenantId?: mongoose.Types.ObjectId;
     email: string;
     name: string;
     password?: string;
     role: UserRole;
+    departmentId?: mongoose.Types.ObjectId;
     adUsername?: string;
     isActive: boolean;
-    // Azure AD fields
     azureAdId?: string;
     azureAdToken?: string;
     azureAdRefreshToken?: string;
@@ -19,64 +20,27 @@ export interface IUser extends Document {
     updatedAt: Date;
 }
 
-const UserSchema = new Schema<IUser>(
-    {
-        email: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true,
-        },
-        name: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        password: {
-            type: String,
-            select: false,
-        },
-        role: {
-            type: String,
-            enum: ['read', 'edit', 'admin'],
-            default: 'read',
-        },
-        adUsername: {
-            type: String,
-            sparse: true,
-            index: true,
-        },
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
-        // Azure AD fields
-        azureAdId: {
-            type: String,
-            sparse: true,
-            index: true,
-        },
-        azureAdToken: {
-            type: String,
-            select: false,
-        },
-        azureAdRefreshToken: {
-            type: String,
-            select: false,
-        },
-        lastAzureSync: {
-            type: Date,
-        },
-    },
-    {
-        timestamps: true,
-    }
-);
+const UserSchema = new Schema<IUser>({
+    tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant' },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    password: { type: String, select: false },
+    role: { type: String, enum: ['read', 'edit', 'admin'], default: 'read' },
+    departmentId: { type: Schema.Types.ObjectId, ref: 'Department' },
+    adUsername: { type: String, sparse: true },
+    isActive: { type: Boolean, default: true },
+    azureAdId: { type: String, sparse: true },
+    azureAdToken: { type: String, select: false },
+    azureAdRefreshToken: { type: String, select: false },
+    lastAzureSync: Date,
+}, { timestamps: true, optimisticConcurrency: true });
 
-UserSchema.index({ azureAdId: 1 });
-UserSchema.index({ lastAzureSync: 1 });
+// During the compatibility window an unscoped legacy user remains unique by email.
+// After migration, identity is tenant-scoped and the old global unique index must be removed.
+UserSchema.index({ tenantId: 1, email: 1 }, { unique: true });
+UserSchema.index({ tenantId: 1, azureAdId: 1 }, { unique: true, sparse: true });
+UserSchema.index({ tenantId: 1, adUsername: 1 }, { sparse: true });
+UserSchema.index({ tenantId: 1, departmentId: 1, isActive: 1 });
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
-
 export default User;
